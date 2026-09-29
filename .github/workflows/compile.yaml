@@ -56,7 +56,7 @@ jobs:
 
       - name: Build example and documentation
         env:
-          TEXINPUTS: ./xlistings//:
+          TEXINPUTS: "./xlistings//:"
         run: |
           pdflatex example.tex
           pdflatex -shell-escape example-beamer.tex
