@@ -1,4 +1,4 @@
-@default_files = ('example.tex', 'example-beamer.tex', 'magic-haskell-doc.tex');
+@default_files = ('examples/example.tex', 'examples/example-beamer.tex', 'magic-haskell-doc.tex');
 $pdf_mode = 1;
 $out_dir = 'build';
 $dvi_mode = 0;

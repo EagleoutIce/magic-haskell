@@ -27,7 +27,7 @@ main = mapM_ print [1 .. 10]
 \end{hs}
 ```
 
-See [`example.tex`](example.tex) and [`example-beamer.tex`](example-beamer.tex) for examples, and [`magic-haskell-doc.tex`](magic-haskell-doc.tex) for the source of the documentation.
+See [`examples/example.tex`](examples/example.tex) and [`examples/example-beamer.tex`](examples/example-beamer.tex) for examples, and [`magic-haskell-doc.tex`](magic-haskell-doc.tex) for the source of the documentation.
 
 ## Development
 

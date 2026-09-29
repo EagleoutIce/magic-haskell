@@ -66,6 +66,13 @@
 \newcommand\descbullet[1]{\llap{\textbullet\enspace}#1}
 \setlist[description]{format=\descbullet,labelindent=0pt,leftmargin=1.5em,itemsep=\medskipamount}
 \setlength\emergencystretch{3em}
+% the running header: the package and its repository
+\usepackage[headsepline]{scrlayer-scrpage}
+\clearpairofpagestyles
+\ihead{\T{magic-haskell}}
+\ohead{\href{https://github.com/EagleoutIce/magic-haskell}{\T{github.com/EagleoutIce/magic-haskell}}}
+\cfoot*{\pagemark}
+\setkomafont{pageheadfoot}{\normalfont\small\color{gray}}
 \RedeclareSectionCommand[tocbeforeskip=2pt]{section}
 % the statistics of the database, counted by reading it once more:
 % \dbcount{names|modules}{package or *}, and the rows of its table
