@@ -3,7 +3,6 @@ latex-bin
 l3build
 l3kernel
 l3packages
-l3backend
 latex
 latex-tools-dev
 cm

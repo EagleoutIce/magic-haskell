@@ -41,6 +41,8 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the documentation goes to the gh-pages branch
     steps:
       - uses: actions/checkout@v7
         with:
@@ -74,3 +76,20 @@ jobs:
             example.pdf
             example-beamer.pdf
             magic-haskell-doc.pdf
+
+      # like the other packages: the README links the PDFs on the gh-pages branch
+      - name: Publish the PDFs to gh-pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -f example.pdf example-beamer.pdf magic-haskell-doc.pdf
+          git commit -m "Newly compiled documentation" || echo "nothing new to commit"
+
+      - name: Push to gh-pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          force: true

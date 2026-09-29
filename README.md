@@ -1,10 +1,12 @@
-# magic-haskell
+# magic-haskell &mdash; Haskell listings that link to Hackage and talk to GHC
 
 [![made-with-latex](https://img.shields.io/badge/Made%20with-LaTeX-1f425f.svg)](https://www.latex-project.org/) [![LPPL 1.3c](https://img.shields.io/badge/License-LPPL%201.3c-yellow.svg)](https://www.latex-project.org/lppl.txt) [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com) [![compile](https://github.com/EagleoutIce/magic-haskell/actions/workflows/compile.yaml/badge.svg)](https://github.com/EagleoutIce/magic-haskell/actions/workflows/compile.yaml) [![verify links](https://github.com/EagleoutIce/magic-haskell/actions/workflows/links.yaml/badge.svg)](https://github.com/EagleoutIce/magic-haskell/actions/workflows/links.yaml)
 
-magic-haskell extends the [xlistings](https://github.com/EagleoutIce/xlistings) package with a Haskell language that automatically links "magic" names to their documentation on [Hackage](https://hackage.haskell.org) or to their definition in the document. It can also ask GHC for types, values, and whole sessions. Originally, I developed magic-haskell privately for the functional programming lecture at Ulm University.
+Write plain Haskell in your LaTeX documents and slides, and get listings that link themselves: known names lead to their documentation on [Hackage](https://hackage.haskell.org), and the functions, types, and constructors you define lead back to their definition. GHC can fill in types, values, and whole GHCi sessions while the document compiles, so your examples stay correct. See the [documentation](https://github.com/EagleoutIce/magic-haskell/blob/gh-pages/magic-haskell-doc.pdf) for all features.
 
-It interacts flawlessly with the styles, line numbers, environments, inline commands, and `minted` emulation layer of xlistings, as well as with the optional [code-animation](https://github.com/EagleoutIce/code-animation) package. All of the following happens automatically for Haskell code:
+Everything builds on [xlistings](https://github.com/EagleoutIce/xlistings) and works with its styles, line numbers, environments, inline commands, and `minted` emulation layer, as well as with the optional [code-animation](https://github.com/EagleoutIce/code-animation) package. I originally developed it privately for the functional programming lecture at Ulm University.
+
+All of the following happens automatically for Haskell code:
 
 - **Links to Hackage.** Known names and operators link to their documentation, from a link database of over 7000 links that can be extended easily.
 - **Links and syntax highlighting for user definitions.** Functions, types, and constructors are recognized where they are defined, and every use links there, anywhere in the document and across beamer overlays.
@@ -25,7 +27,7 @@ main = mapM_ print [1 .. 10]
 \end{hs}
 ```
 
-See [`magic-haskell-doc.tex`](magic-haskell-doc.tex) for the documentation, [`example.tex`](example.tex) and [`example-beamer.tex`](example-beamer.tex) for examples.
+See [`example.tex`](example.tex) and [`example-beamer.tex`](example-beamer.tex) for examples, and [`magic-haskell-doc.tex`](magic-haskell-doc.tex) for the source of the documentation.
 
 ## Development
 
