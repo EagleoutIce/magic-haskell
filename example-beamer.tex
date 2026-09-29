@@ -1,0 +1,37 @@
+\documentclass{beamer}
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext,newpxmath}
+\usepackage[varqu,varl,scale=.95]{inconsolata}
+\usepackage{csquotes}
+\usepackage[ghc,language=haskell,xlistings={style={plain number}}]{magic-haskell}
+% a calm palette (after Catppuccin Latte) through the colors of xlistings
+\definecolor{plum}{HTML}{9B1B6E}         \definecolor{latte-blue}{HTML}{1E66F5}
+\definecolor{latte-green}{HTML}{40A02B}  \definecolor{latte-text}{HTML}{4C4F69}
+\definecolor{latte-subtle}{HTML}{9CA0B0}
+\lstcolorlet{keywordA}{plum}             % keywords
+\lstcolorlet{keywordB}{latte-blue}       % types and constructors
+\lstcolorlet{keywordC}{latte-text}       % functions, marked by their links
+\lstcolorlet{numbers}{latte-blue}
+\lstcolorlet{literals}{latte-green}
+\lstcolorlet{comments}{latte-subtle}
+\usefonttheme{serif}
+\title{\enquote{Magic} Haskell}
+\begin{document}
+\begin{frame}[fragile]{A GHCi session, step by step}
+Each step appears on its own overlay:
+\begin{ghcisession}
+let xs = [1 .. 10]
+sum xs
+filter even xs
+:t foldr
+foldr (\x acc -> x + acc) 0 xs
+\end{ghcisession}
+\end{frame}
+\begin{frame}[fragile]{Types from GHC}
+\begin{minted}{haskell}
+fib :: Integer -> Integer
+fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
+\end{minted}
+The type of \bhaskell{zipWith} is \mhsType{zipWith} and \bhaskell{take 5 [2, 4 ..]} is \mhsEval{take 5 [2, 4 ..]}.
+\end{frame}
+\end{document}

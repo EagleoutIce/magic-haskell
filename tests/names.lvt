@@ -1,0 +1,46 @@
+% Names are linked as whole words, next to any other character, and not in
+% strings, comments, or the paths of imports.
+\input{regression-test}
+\documentclass{article}
+\usepackage{magic-haskell}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\TEST{whole words}{\Typeset{\bmhs{putStrLn mapTree remap map' xmap}}}
+\TEST{next to punctuation}{\Typeset{\bmhs{[map,filter] id<id (show)}}}
+\TEST{backticks}{\Typeset{\bmhs{x `elem` xs `div` 2}}}
+\TEST{underscore and prime}{\Typeset{\bmhs{mapM_ foldl' sequence_}}}
+\TEST{digits}{\Typeset{\bmhs{foldl1 zip3 myzip3 liftA2}}}
+\TEST{strings}{\Typeset{\bmhs{"map filter"}}}
+\TEST{comments}{\Typeset{\bmhs{x -- map filter Data.Map.insert show.map}}}
+\BeginBox{block comment}
+\begin{mhs}
+{- map
+   filter -} show
+\end{mhs}
+\EndBox
+\BeginBox{import lines}
+\begin{mhs}
+import Data.Map (Map, insert)
+import qualified Data.Char as C
+module Main where
+x = importantThing (map f) modulesOf (filter g)
+\end{mhs}
+\EndBox
+\TEST{qualified}{\Typeset{\bmhs{Data.Map.insert Data.Char.toUpper Unknown.map}}}
+\TEST{composition}{\Typeset{\bmhs{show.map f.g}}}
+\TEST{char literals}{\Typeset{\bmhs{f '$' 'x' '\n'}}}
+\BeginBox{aliases}
+\begin{mhs}
+import qualified Data.Map.Strict as M
+import Data.Set (Set)
+x = M.lookup k m ++ M.insert
+\end{mhs}
+\EndBox
+\TEST{types and constructors}{\Typeset{\bmhs{Maybe Just Nothing Either Left IO}}}
+\TEST{other packages}{\Typeset{\bmhs{Map ask when}}}
+\TEST{no link}{\mhsNoLink{show,Maybe}\Typeset{\bmhs{show Maybe}}}
+\TEST{custom link}{\mhsAddLink[type]{https://example.org/T}{Tree}\Typeset{\bmhs{Tree map}}}
+\TEST{custom link wins}{\mhsAddLink[func]{https://example.org/f}{filter}\Typeset{\bmhs{filter}}}
+\END

@@ -1,0 +1,14 @@
+% The database: packages, versions, modules, and constructors.
+\input{regression-test}
+\documentclass{article}
+\usepackage[database=testlinks,packages={pa,pb}]{magic-haskell}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\TEST{module priority}{\Typeset{\bmhs{same}}}
+\TEST{active module}{\mhsModules{B.Two}\Typeset{\bmhs{same}}\mhsModules{}}
+\TEST{constructor}{\Typeset{\bmhs{Con Ty}}}
+\TEST{operator}{\Typeset{\bmhs{a .+. b}}}
+\TEST{no version}{\mhsSetVersion{pa}{}\Typeset{\bmhs{same}}\mhsSetVersion{pa}{1.0}}
+\END

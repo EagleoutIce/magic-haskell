@@ -1,0 +1,18 @@
+% The options of the package and their switches in the document.
+\input{regression-test}
+\documentclass{article}
+\usepackage[links=false,tight=false,underline=false,packages={mtl, containers}]{magic-haskell}
+\usepackage{mhstest}
+\makeatletter
+\AtBeginDocument{\let\mhstest@underline\mhs@underline
+  \def\mhs@underline#1{\ifmhs@underline\typeout{UNDERLINE}\fi\mhstest@underline{#1}}}
+\makeatother
+\begin{document}
+\WarmUp
+\START
+\TEST{links off}{\Typeset{\bmhs{get insert}}}
+\TEST{links on}{\mhsLinksOn\Typeset{\bmhs{get insert map}}}
+\TEST{underline on}{\mhsLinksOn\mhsUnderlineOn\Typeset{\bmhs{get}}\mhsUnderlineOff}
+\TEST{tight off}{\Typeset{\bmhs{a <$> b}}}
+\TEST{tight on}{\mhsTightOn\Typeset{\bmhs{a <$> b}}}
+\END

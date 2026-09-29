@@ -1,0 +1,35 @@
+% Answers of GHCi are mapped back to their queries (no GHC needed: the script
+% and the output of a previous run are fixtures in tests/support).
+\input{regression-test}
+\documentclass{article}
+\usepackage[ghc]{magic-haskell}
+\usepackage{mhstest}
+\mhsGhcRun{never}
+\ExplSyntaxOn
+\cs_new_protected:Npn \Show #1 { \mhsGhcTypeInto \Answer {#1}
+  \TYPE { \tl_to_str:N \Answer \c_space_tl [ \bool_if:NTF \g_mhs_ghc_error_bool { error } { ok } ] } }
+\cs_new_protected:Npn \ShowEval #1 { \setbox0\hbox{\mhsEvalOf{#1}
+  \TYPE { \l_mhs_ghc_answer_str \c_space_tl [ \bool_if:NTF \g_mhs_ghc_error_bool { error } { ok } ] } } }
+\cs_new_protected:Npn \ShowTime
+  {
+    \setbox0\hbox{\mhsGhcTimeText~\mhsGhcMemoryText}
+    \TYPE { last~evaluation: \c_space_tl \mhsGhcTime \c_space_tl ms, \c_space_tl \mhsGhcMemory \c_space_tl bytes }
+  }
+\cs_new_protected:Npn \ShowArg #1 { \__mhs_ghc_arg:n {#1} \TYPE { \l__mhs_ghc_arg_str } }
+\ExplSyntaxOff
+\begin{document}
+\WarmUp
+\START
+\TEST{types}{\Show{map}\Show{  map  }}
+\TEST{echo differs}{\Show{(read "1" :: Int)}}
+\TEST{error}{\Show{nope}}
+\TEST{eval}{\ShowEval{map (+1) [1,2]}}
+\TEST{eval into}{\mhsGhcEvalInto\Answer{map (+1) [1,2]}\TYPE{\Answer}}
+\TEST{regular arguments}{\ShowArg{"a\nb"}\ShowArg{\x -> x}\ShowArg{5 \% 3}}
+\ShowArg{length "#x"}
+\TEST{second query}{\Show{filter}}
+\TEST{context}{\mhsGhcLoad{Fib.hs}\Show{fib}\mhsGhcUnload\Show{fib}}
+\TEST{load error}{\mhsGhcLoad{Broken.hs}\Show{broken}\mhsGhcUnload}
+\TEST{timing}{\ShowEval{sum [1 .. 10]}\ShowTime\Show{map}\ShowTime}
+\EndDocumentHooks
+\END

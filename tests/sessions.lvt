@@ -1,0 +1,31 @@
+% GHCi sessions: every line is answered in turn, blocks are one input, and a
+% repeated line is asked again. The answers are a fixture recorded from GHC.
+\input{regression-test}
+\documentclass{article}
+\usepackage[ghc]{magic-haskell}
+\usepackage{mhstest}
+\mhsGhcRun{never}
+\begin{document}
+\WarmUp
+\START
+\SEPARATOR\TYPE{TEST: session}
+\begin{ghcisession}
+let x = 1
+x
+let x = 2
+x
+putStr "no newline"
+"a!*b{#%}"
+:{
+f :: Int -> Int
+f y = y + 1
+:}
+f 41
+head []
+\end{ghcisession}
+\SEPARATOR\TYPE{TEST: options}
+\begin{ghcisession}[listing={numbers=left}]
+x
+\end{ghcisession}
+\EndDocumentHooks
+\END

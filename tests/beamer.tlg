@@ -1,0 +1,144 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST: use before the definition links to its last overlay
+(beamer.vrb
+INTERNAL: mhs.5.size
+INTERNAL: mhs.5.Leaf
+) [1
+]
+============================================================
+TEST: listing and overlays
+(beamer.vrb
+TARGET: mhs.4.Tree
+TARGET: mhs.4.Leaf
+TARGET: mhs.4.Node
+INTERNAL: mhs.4.Tree
+INTERNAL: mhs.4.Tree
+TARGET: mhs.4.size
+COPY: ::
+INTERNAL: mhs.4.Tree
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.4.size
+INTERNAL: mhs.4.Leaf
+) [2
+] (beamer.vrb
+TARGET: mhs.5.Tree
+TARGET: mhs.5.Leaf
+TARGET: mhs.5.Node
+INTERNAL: mhs.5.Tree
+INTERNAL: mhs.5.Tree
+TARGET: mhs.5.size
+COPY: ::
+INTERNAL: mhs.5.Tree
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.5.size
+INTERNAL: mhs.5.Leaf
+INTERNAL: mhs.5.size
+INTERNAL: mhs.5.Node
+INTERNAL: mhs.5.Leaf
+INTERNAL: mhs.5.Leaf
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:-60--36--62-
+COPY: <$>
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+) [3
+]
+============================================================
+TEST: markers, qualified names, local definitions
+(beamer.vrb
+TARGET: mhs.7.go
+MARK: mhswarning
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:lookup
+MARK: mhswarning
+MARK: mhswarning
+MARK: mhswarning
+MARK: mhswarning
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:-62--62--61-
+COPY: >>=
+INTERNAL: mhs.7.f
+TARGET: mhs.7.f
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:pure
+) [4
+]
+============================================================
+TEST: animated session
+(beamer.vrb
+\g__mhs_ghc_iow=\write...
+SESSION: ghci> let xs = [1 .. 3]
+SESSION: 
+SESSION: 
+SESSION: 
+SESSION: 
+) [5
+] (beamer.vrb
+SESSION: ghci> let xs = [1 .. 3]
+SESSION: ghci> sum xs
+SESSION: out>6
+SESSION: 
+SESSION: 
+) [6
+] (beamer.vrb
+SESSION: ghci> let xs = [1 .. 3]
+SESSION: ghci> sum xs
+SESSION: out>6
+SESSION: ghci> map (*2) xs
+SESSION: out>[2,4,6]
+) [7
+]
+============================================================
+TEST: session from overlay 2
+(beamer.vrb
+) [8
+] (beamer.vrb
+SESSION: ghci> product [1 .. 4]
+SESSION: out>24
+) [9
+]
+============================================================
+TEST: pause within a listing, then a use in the next frame
+(beamer.vrb
+TARGET: mhs.8.twice
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.8.twice
+) [10
+] (beamer.vrb
+TARGET: mhs.9.twice
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.9.twice
+) [11
+]
+(beamer.vrb
+INTERNAL: mhs.9.twice
+) [12
+]
+============================================================
+TEST: a definition hidden by onlyenv defines nothing there
+(beamer.vrb
+INTERNAL: mhs.9.twice
+INTERNAL: mhs.9.twice
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Integer
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Integer
+) [13
+] (beamer.vrb
+INTERNAL: mhs.9.twice
+TARGET: mhs.14.twice
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Integer
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Integer
+) [14
+]
+(beamer.vrb
+INTERNAL: mhs.14.twice
+) [15
+]

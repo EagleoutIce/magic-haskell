@@ -1,0 +1,16 @@
+% The internal string helpers: haddock anchors, module paths, kinds, and urls.
+\input{regression-test}
+\documentclass{article}
+\usepackage{magic-haskell}
+\makeatletter
+\def\A#1{\mhs@map\mhs@encode{#1}\TYPE{\mhs@out}}
+\def\M#1{\TYPE{\mhs@dashes#1.\@nil}}
+\def\K#1{\mhs@kind{#1}\TYPE{\mhs@out}}
+\begin{document}
+\START
+\TEST{anchors}{\A{map}\A{foldl'}\A{sequence_}\A{<\$>}\A{\&\&}\A{>>=}\A{!!}}
+\TEST{modules}{\M{Prelude}\M{Data.List}\M{Control.Monad.State.Class}}
+\TEST{kinds}{\K{Maybe}\K{map}\K{_x}\K{\$}\K{<*>}\K{==}}
+\TEST{urls}{\mhsSetVersion{foo}{1.2}\TYPE{\mhs@hackage{foo}{A-B}{v:x}}%
+  \mhsSetVersion{foo}{}\TYPE{\mhs@hackage{foo}{A-B}{t:X}}}
+\END

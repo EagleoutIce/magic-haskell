@@ -1,0 +1,22 @@
+% Operators are linked and typeset as ligatures, but not in strings,
+% comments, or words.
+\input{regression-test}
+\documentclass{article}
+\usepackage{magic-haskell}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\TEST{arrows}{\Typeset{\bmhs{f :: a -> b; x <- y; C a => a}}}
+\TEST{longest match}{\Typeset{\bmhs{a <$ b <$> c <* d <*> e}}}
+\TEST{prefixes}{\Typeset{\bmhs{a >> b >>= c =<< d >=> e}}}
+\TEST{escaped characters}{\Typeset{\bmhs{a \$ b \&\& c .&. d}}}
+\TEST{constructor operators}{\Typeset{\bmhs{a :| b}}}
+\TEST{strings}{\Typeset{\bmhs{"<$> >>= $"}}}
+\TEST{comments}{\Typeset{\bmhs{x -- <$> >>= $}}}
+\TEST{sections}{\Typeset{\bmhs{(<$>) (+ 1) ($ x)}}}
+\TEST{ranges}{\Typeset{\bmhs{[1..n] [1, 3 .. 9] 4.5 .5}}}
+\TEST{no ligatures}{\mhsLigaturesOff\Typeset{\bmhs{a <$> b -> c}}\mhsLigaturesOn}
+\TEST{custom operator}{\mhsAddLink[op]{https://example.org/op}{<+>}\Typeset{\bmhs{a <+> b}}}
+\TEST{custom ligature}{\mhsTightLigature{<~>}\mhsLigature{<~}{\ensuremath{\leftarrow}}\Typeset{\bmhs{a <~> b <~ c}}}
+\END

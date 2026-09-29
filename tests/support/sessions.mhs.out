@@ -1,0 +1,39 @@
+@@mhs:load:|624AE2AD0AEF284B06C03303FDC089A6@@
+
+@@mhs:file:@@
+
+@@mhs:1@@
+
+@@mhs:2@@
+1
+
+@@mhs:3@@
+
+@@mhs:4@@
+2
+
+@@mhs:5@@
+no newline
+@@mhs:6@@
+"a!*b{#%}"
+
+@@mhs:7@@
+
+@@mhs:8@@
+42
+
+@@mhs:9@@
+*** Exception: Prelude.head: empty list
+CallStack (from HasCallStack):
+  error, called at libraries/ghc-internal/src/GHC/Internal/List.hs:2030:3 in ghc-internal:GHC.Internal.List
+  errorEmptyList, called at libraries/ghc-internal/src/GHC/Internal/List.hs:96:11 in ghc-internal:GHC.Internal.List
+  badHead, called at libraries/ghc-internal/src/GHC/Internal/List.hs:90:28 in ghc-internal:GHC.Internal.List
+  head, called at <interactive>:25:1 in interactive:Ghci19
+
+@@mhs:load:|9DD4E461268C8034F5C8564E155C67A6@@
+
+@@mhs:file:@@
+
+@@mhs:10@@
+<interactive>:30:1: error: [GHC-88464] Variable not in scope: x
+

@@ -1,0 +1,26 @@
+% Escapes and markers typeset, markers keep links.
+\input{regression-test}
+\documentclass{article}
+\usepackage[xlistings={highlights}]{magic-haskell}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\TEST{error}{\Typeset{\bmhs{|err|map|err| f}}}
+\BeginBox{several lines}
+\begin{mhs}
+safe xs = |info|listToMaybe xs
+  >>= pure . show|info| -- two lines
+\end{mhs}
+\EndBox
+\TEST{warning}{\Typeset{\bmhs{|warn|head xs|warn|}}}
+\TEST{info}{\Typeset{\bmhs{|info|show|info|}}}
+\TEST{number}{\Typeset{\bmhs{|num|x|num|}}}
+\TEST{dim}{\Typeset{\bmhs{|dim|map f|dim|}}}
+\TEST{plain}{\Typeset{\bmhs{|plain|map|plain| filter}}}
+\BeginBox{escape}
+\begin{mhs}
+x !*\TYPE{ESCAPED}*! map
+\end{mhs}
+\EndBox
+\END

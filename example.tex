@@ -1,0 +1,39 @@
+\documentclass{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext,newpxmath}
+\usepackage[varqu,varl,scale=.95]{inconsolata}
+\usepackage{csquotes}
+\usepackage[language=haskell,xlistings={style={plain number}}]{magic-haskell}
+% a calm palette (after Catppuccin Latte) through the colors of xlistings
+\definecolor{plum}{HTML}{9B1B6E}         \definecolor{latte-blue}{HTML}{1E66F5}
+\definecolor{latte-green}{HTML}{40A02B}  \definecolor{latte-text}{HTML}{4C4F69}
+\definecolor{latte-subtle}{HTML}{9CA0B0}
+\lstcolorlet{keywordA}{plum}             % keywords
+\lstcolorlet{keywordB}{latte-blue}       % types and constructors
+\lstcolorlet{keywordC}{latte-text}       % functions, marked by their links
+\lstcolorlet{numbers}{latte-blue}
+\lstcolorlet{literals}{latte-green}
+\lstcolorlet{comments}{latte-subtle}
+\usepackage[hidelinks]{hyperref}
+\setkomafont{disposition}{\rmfamily\bfseries}
+\begin{document}
+\section*{Counting with state}
+Every known name links to its documentation on Hackage, and operators become \enquote{ligatures}
+that still copy as the original text:
+\begin{minted}{haskell}
+import Control.Monad.State
+
+-- count the calls of the step function
+counter :: Int -> State Int [Int]
+counter n = do
+  xs <- mapM (\x -> modify (+1) >> pure (x * 2)) [1 .. n]
+  k  <- get
+  when (k /= n) $ error "unreachable"
+  pure (filter even xs)
+\end{minted}
+Inline, too: \bhaskell{foldr (+) 0 <\$> Just [1, 2, 3]}. And a GHCi session:
+\begin{minted}{ghci}
+ghci> :t fmap
+out>fmap :: Functor f => (a -> b) -> f a -> f b
+\end{minted}
+\end{document}

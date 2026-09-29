@@ -1,0 +1,56 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST 1: error
+============================================================
+MARK: mhserror
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+============================================================
+============================================================
+TEST: several lines
+MARK: mhsinfo
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Data-Maybe.html\#v:listToMaybe
+MARK: mhsinfo
+MARK: mhsinfo
+MARK: mhsinfo
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:-62--62--61-
+COPY: >>=
+MARK: mhsinfo
+MARK: mhsinfo
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:pure
+MARK: mhsinfo
+MARK: mhsinfo
+MARK: mhsinfo
+MARK: mhsinfo
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:show
+============================================================
+TEST 2: warning
+============================================================
+MARK: mhswarning
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:head
+MARK: mhswarning
+MARK: mhswarning
+============================================================
+============================================================
+TEST 3: info
+============================================================
+MARK: mhsinfo
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:show
+============================================================
+============================================================
+TEST 4: number
+============================================================
+============================================================
+============================================================
+TEST 5: dim
+============================================================
+============================================================
+============================================================
+TEST 6: plain
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:filter
+============================================================
+============================================================
+TEST: escape
+ESCAPED
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map

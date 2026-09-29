@@ -1,0 +1,71 @@
+% Everything in beamer: frames are typeset once per overlay, so links,
+% definitions, markers, and animated GHCi sessions must hold on every one.
+\input{regression-test}
+\documentclass{beamer}
+\usepackage[ghc]{magic-haskell}
+\usepackage{mhstest}
+\mhsGhcRun{never}
+\setbeamertemplate{navigation symbols}{}
+\begin{document}
+\WarmUp
+\START
+\SEPARATOR\TYPE{TEST: use before the definition links to its last overlay}
+\begin{frame}[fragile]
+\bmhs{size Leaf}
+\end{frame}
+\SEPARATOR\TYPE{TEST: listing and overlays}
+\begin{frame}[fragile]
+\begin{mhs}
+data Tree = Leaf | Node Tree Tree
+size :: Tree -> Int
+size Leaf = 1
+\end{mhs}
+\only<2>{\bmhs{size (Node Leaf Leaf) <$> map}}
+\end{frame}
+\SEPARATOR\TYPE{TEST: markers, qualified names, local definitions}
+\begin{frame}[fragile]
+\begin{mhs}
+import qualified Data.Map.Strict as M
+go = |warn|M.lookup k m|warn| >>= f
+  where f x = pure x
+\end{mhs}
+\end{frame}
+\SEPARATOR\TYPE{TEST: animated session}
+\begin{frame}[fragile]
+\begin{ghcisession}
+let xs = [1 .. 3]
+sum xs
+map (*2) xs
+\end{ghcisession}
+\end{frame}
+\SEPARATOR\TYPE{TEST: session from overlay 2}
+\begin{frame}[fragile]
+\mhsGhcSessionSetup{start=2}
+\begin{ghcisession}
+product [1 .. 4]
+\end{ghcisession}
+\end{frame}
+\SEPARATOR\TYPE{TEST: pause within a listing, then a use in the next frame}
+\begin{frame}[fragile]
+\begin{mhs}
+twice :: Int -> Int !*\pause*!
+twice x = x + x
+\end{mhs}
+\end{frame}
+\begin{frame}[fragile]
+\bmhs{twice 2}
+\end{frame}
+\SEPARATOR\TYPE{TEST: a definition hidden by onlyenv defines nothing there}
+\begin{frame}[fragile]
+\bmhs{twice}
+\begin{onlyenv}<2>
+\begin{mhs}
+twice :: Integer -> Integer
+\end{mhs}
+\end{onlyenv}
+\end{frame}
+\begin{frame}[fragile]
+\bmhs{twice}
+\end{frame}
+\EndDocumentHooks
+\END

@@ -1,0 +1,36 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST 1: inline
+============================================================
+INTERNAL: mhs.10.x
+INTERNAL: mhs.10.x
+INTERNAL: mhs.10.x
+============================================================
+============================================================
+TEST: mhs
+INTERNAL: mhs.7.f
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.10.x
+COPY: ->
+INTERNAL: mhs.10.x
+============================================================
+TEST: mhs*
+TARGET: mhs.7.f
+MARK: mhswarning
+MARK: mhserror
+============================================================
+TEST: plainmhs
+TARGET: mhs.8.f
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Control-Monad-ST.html\#v:runST
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Data-STRef.html\#v:newSTRef
+============================================================
+TEST: ghci
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:fmap
+============================================================
+TEST: minted
+TARGET: mhs.10.x
+LINK: https://hackage.haskell.org/package/hspec-expectations-0.8.4/docs/Test-Hspec-Expectations.html\#v:shouldBe
+LINK: https://hackage.haskell.org/package/parsec-3.1.18.0/docs/Text-Parsec.html\#v:many1
+LINK: https://hackage.haskell.org/package/parsec-3.1.18.0/docs/Text-Parsec-Char.html\#v:digit
+LINK: https://hackage.haskell.org/package/random-1.3.1/docs/System-Random.html\#v:randomRIO

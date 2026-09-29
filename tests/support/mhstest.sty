@@ -1,0 +1,44 @@
+% mhstest.sty -- test harness for magic-haskell
+% Load *after* magic-haskell and \begin{document}: every link and every
+% ligature writes a line to the log, so the tests can compare them.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mhstest}[2026/09/29 magic-haskell test harness]
+\newbox\mhstest@box
+\AtBeginDocument{%
+  \def\mhs@href#1#2{\typeout{LINK: \detokenize\expandafter{\expanded{#1}}}#2}%
+  \let\mhstest@copyas\mhs@copyas
+  \def\mhs@copyas#1#2{\typeout{COPY: \detokenize\expandafter{#1}}\mhstest@copyas{#1}{#2}}%
+  \ifdefined\hyperlink
+    \def\hypertarget#1#2{\typeout{TARGET: #1}#2}%
+    \def\hyperlink#1#2{\typeout{INTERNAL: #1}#2}%
+  \fi}
+% #1 code, typeset into a box and dropped
+\newcommand\Typeset[1]{\setbox\mhstest@box\vbox{\hsize=\linewidth#1}}
+% listings environments cannot be arguments: \BeginBox{name} <env> \EndBox
+\def\BeginBox#1{\SEPARATOR\TYPE{TEST: #1}\setbox\mhstest@box\vbox\bgroup\hsize=\linewidth}
+\def\EndBox{\egroup}
+% the boxes are dropped, not shipped out, so definitions are written at once;
+% beamer frames are shipped out as usual
+\@ifclassloaded{beamer}{}{\def\mhs@write{\immediate\write}}
+% before \START: loads the language files and fonts, which would clutter the log
+\newcommand\WarmUp{\Typeset{\bmhs{x -> y}\bghci{x}$x^{y_z}$\textsf{\textit{x}}\texttt{\textbackslash}}}
+% \END stops TeX at once, but magic-haskell-ghc writes at the end of the document
+\newcommand\EndDocumentHooks{\OMIT\UseHook{enddocument}\TIMO}
+% sessions write their lines instead of typesetting them
+\ExplSyntaxOn
+\AtBeginDocument
+  {
+    \cs_if_exist:NT \mhs@ghc@input
+      {
+        \cs_set_protected:Npn \mhs@ghc@input #1#2#3
+          {
+            \ior_open:Nn \g_tmpa_ior {#3}
+            \ior_str_map_inline:Nn \g_tmpa_ior { \typeout { SESSION:~##1 } }
+            \ior_close:N \g_tmpa_ior
+          }
+      }
+  }
+\ExplSyntaxOff
+% markers write their color
+\AtBeginDocument{\ifdefined\mhs@mark\let\mhstest@mark\mhs@mark
+  \def\mhs@mark#1{\typeout{MARK: \mhs@marking}\mhstest@mark{#1}}\fi}

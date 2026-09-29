@@ -1,0 +1,612 @@
+% magic-haskell-ghc.sty
+% GHC integration for magic-haskell: types, values, and whole GHCi sessions.
+%
+% Every query is a line for GHCi (':t map', 'map (+1) [1,2]'). All queries
+% of a run go to one script '<jobname>.mhs.ghci', each after a marker line
+% '@@mhs:<n>@@', and the aux file remembers which query has which marker.
+% One GHCi runs the script (if shell escape allows it and the script
+% changed) into '<jobname>.mhs.out', which the next run reads.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{magic-haskell-ghc}[2026/09/29 version v1.0 GHC integration for magic-haskell]
+\RequirePackage{magic-haskell}
+\RequirePackage{shellesc}
+\RequirePackage{fancyvrb}
+\RequirePackage{verbatim}
+
+\ExplSyntaxOn
+% by default the first of: ghc on the PATH, ghcup's ghc, stack's ghc; on
+% Windows (cmd.exe) the ghc on the PATH, where ghcup puts it
+\tl_new:N \g__mhs_ghc_cmd_tl
+\sys_if_platform_windows:TF
+  { \tl_gset:Nn \g__mhs_ghc_cmd_tl { ghc } }
+  {
+    \tl_gset:Ne \g__mhs_ghc_cmd_tl
+      {
+        \c_dollar_str ( command~-v~ghc~||~ls~ \c_dollar_str HOME/.ghcup/bin/ghc~2>/dev/null~||~
+        (command~-v~stack~>/dev/null~&&~echo~stack~exec~--~ghc)~||~echo~ghc )
+      }
+  }
+\tl_new:N \g__mhs_ghc_flags_tl   % one answer per line, no warnings, colors, or excerpts
+\tl_gset:Nn \g__mhs_ghc_flags_tl
+  { --interactive~-v0~-ignore-dot-ghci~-w~-dppr-cols=100000~-fdiagnostics-color=never~-fno-diagnostics-show-caret }
+\str_new:N \g__mhs_ghc_run_str   % auto, always, or never
+\str_gset:Nn \g__mhs_ghc_run_str { auto }
+\seq_new:N \g__mhs_ghc_setup_seq
+\seq_new:N \g__mhs_ghc_import_seq
+\str_const:Ne \c__mhs_ghc_script_str { \c_sys_jobname_str .mhs.ghci }
+\str_const:Ne \c__mhs_ghc_out_str    { \c_sys_jobname_str .mhs.out }
+
+\str_new:N  \g__mhs_ghc_ctx_str      % the file queries are answered in
+\seq_new:N  \g__mhs_ghc_queries_seq  % {ctx}{line}, in order
+\prop_new:N \g__mhs_ghc_known_prop   % ctx >>> line -> {}
+\prop_new:N \g__mhs_ghc_answers_prop % ctx >>> line -> {line 1}{line 2}...
+\prop_new:N \g__mhs_ghc_errors_prop  % ctx >>> line -> {}, if GHCi failed
+\prop_new:N \g__mhs_ghc_loaderr_prop % ctx -> diagnostic of :load
+\prop_new:N \g__mhs_ghc_keys_prop    % marker -> ctx >>> line
+\str_new:N  \g__mhs_ghc_lastmdfive_str
+\bool_new:N \g__mhs_ghc_rerun_bool
+\bool_new:N \l__mhs_ghc_ok_bool
+\bool_new:N \g_mhs_ghc_error_bool    % the last query failed
+\bool_new:N \l_mhs_ghc_pending_bool  % the last query has no answer yet
+\tl_new:N   \l_mhs_ghc_lines_tl      % the answer of the last query
+\str_new:N  \l_mhs_ghc_answer_str    % ... in one line
+\str_new:N  \g_mhs_ghc_ms_str        % the time of the last evaluation in ms, e.g. 10
+\str_new:N  \g_mhs_ghc_bytes_str     % ... and the memory it allocated in bytes, e.g. 123456
+\str_new:N  \g__mhs_ghc_bytes_str    % ... as GHCi printed it, e.g. 123,456
+\prop_new:N \g__mhs_ghc_stats_prop   % ctx >>> line -> {secs}{bytes}
+
+\str_new:N \l__mhs_ghc_key_str
+\str_new:N \l__mhs_ghc_ctx_str
+\str_new:N \l__mhs_ghc_marker_str
+\str_new:N \l__mhs_ghc_pending_str
+\str_new:N \l__mhs_ghc_first_str
+\str_new:N \l__mhs_ghc_type_str
+\seq_new:N \l__mhs_ghc_buffer_seq
+\seq_new:N \l__mhs_ghc_match_seq
+\int_new:N \l__mhs_ghc_n_int
+\ior_new:N \g__mhs_ghc_ior
+\iow_new:N \g__mhs_ghc_iow
+\cs_generate_variant:Nn \prop_gput:Nnn { NVV , Nee , NVe }
+
+\msg_new:nnn { magic-haskell } { ghc-error } { GHCi~cannot~answer~'#1':~#2 }
+\msg_new:nnn { magic-haskell } { ghc-load } { GHCi~cannot~load~'#1':~#2 }
+\msg_new:nnn { magic-haskell } { ghc-rerun } { The~GHCi~answers~changed.~Rerun~to~get~them~right. }
+\msg_new:nnn { magic-haskell } { ghc-failed } { GHCi~failed~('#1')~running: \\ #2 }
+\msg_new:nnn { magic-haskell } { ghc-manual } { Shell~escape~is~not~available.~Run~GHCi~by~hand~and~rerun: \\ #1 }
+
+\cs_new:Npn \__mhs_ghc_key:nn #1#2 { #1 ~>>>~ #2 }
+% a query of several lines (a block ':{ ... :}') has newlines in its string
+\str_const:Ne \c__mhs_ghc_nl_str { \char_generate:nn { 10 } { 12 } }
+% the marker starts a line of its own, even after output without a newline
+\cs_new:Npn \__mhs_ghc_marker:n #1 { putStrLn~"\c_backslash_str n@@mhs:#1@@" }
+\prop_new:N \l__mhs_ghc_occ_prop
+\bool_new:N \l__mhs_ghc_block_bool
+\str_new:N  \l__mhs_ghc_block_str
+% #1 ctx >>> line: the key of its next occurrence (repeated lines of a session)
+\cs_new_protected:Npn \__mhs_ghc_occurrence:n #1
+  {
+    \prop_get:NnNTF \l__mhs_ghc_occ_prop {#1} \l__mhs_ghc_first_str
+      { \str_set:Ne \l__mhs_ghc_first_str { \int_eval:n { \l__mhs_ghc_first_str + 1 } } }
+      { \str_set:Nn \l__mhs_ghc_first_str { 1 } }
+    \prop_put:NnV \l__mhs_ghc_occ_prop {#1} \l__mhs_ghc_first_str
+    \str_set:Ne \l__mhs_ghc_key_str
+      { #1 \int_compare:nNnF { \l__mhs_ghc_first_str } = 1 { ~\#\l__mhs_ghc_first_str } }
+  }
+
+% from the aux file: marker #1 answers the query #2 (hex, as it may hold any character)
+\cs_new_protected:Npn \mhs@ghc@key #1#2
+  {
+    \str_set_convert:Nnnn \l__mhs_ghc_key_str {#2} { utf8/hex } { }
+    \prop_gput:NnV \g__mhs_ghc_keys_prop {#1} \l__mhs_ghc_key_str
+  }
+% the lines up to the next marker belong to a marker
+\cs_new_protected:Npn \__mhs_ghc_read_out:
+  {
+    \str_clear:N \l__mhs_ghc_marker_str
+    \ior_open:Nn \g__mhs_ghc_ior { \c__mhs_ghc_out_str }
+    \ior_str_map_inline:Nn \g__mhs_ghc_ior
+      {
+        \regex_extract_once:nnNTF { \A@@mhs:(.*)@@\Z } {##1} \l__mhs_ghc_match_seq
+          {
+            \str_set:Ne \l__mhs_ghc_pending_str { \seq_item:Nn \l__mhs_ghc_match_seq { 2 } }
+            \__mhs_ghc_flush:
+            \str_set_eq:NN \l__mhs_ghc_marker_str \l__mhs_ghc_pending_str
+          }
+          { \str_if_empty:nF {##1} { \seq_put_right:Nn \l__mhs_ghc_buffer_seq {##1} } }
+      }
+    \__mhs_ghc_flush:
+    \ior_close:N \g__mhs_ghc_ior
+  }
+\cs_new_protected:Npn \__mhs_ghc_flush:
+  {
+    \regex_extract_once:nVNTF { \Aload:(.*)\Z } \l__mhs_ghc_marker_str \l__mhs_ghc_match_seq
+      {
+        \seq_if_empty:NF \l__mhs_ghc_buffer_seq
+          {
+            \prop_gput:Nee \g__mhs_ghc_loaderr_prop { \seq_item:Nn \l__mhs_ghc_match_seq { 2 } }
+              { \seq_use:Nn \l__mhs_ghc_buffer_seq { ~ } }
+          }
+      }
+      {
+        \prop_get:NVNT \g__mhs_ghc_keys_prop \l__mhs_ghc_marker_str \l__mhs_ghc_key_str
+          {
+            \seq_get_right:NNT \l__mhs_ghc_buffer_seq \l__mhs_ghc_first_str
+              {
+                \regex_extract_once:nVNT { \A\(([0-9.]+)\ secs,\ ([0-9,]+)\ bytes\)\Z }
+                  \l__mhs_ghc_first_str \l__mhs_ghc_match_seq
+                  {
+                    \seq_pop_right:NN \l__mhs_ghc_buffer_seq \l__mhs_ghc_first_str
+                    \prop_gput:NVe \g__mhs_ghc_stats_prop \l__mhs_ghc_key_str
+                      {
+                        { \seq_item:Nn \l__mhs_ghc_match_seq { 2 } }
+                        { \seq_item:Nn \l__mhs_ghc_match_seq { 3 } }
+                      }
+                  }
+              }
+            \prop_gput:NVe \g__mhs_ghc_answers_prop \l__mhs_ghc_key_str
+              { \seq_map_function:NN \l__mhs_ghc_buffer_seq \__mhs_ghc_braced:n }
+            % a diagnostic of GHC first, or an exception anywhere
+            \str_set:Ne \l__mhs_ghc_first_str { \seq_item:Nn \l__mhs_ghc_buffer_seq { 1 } }
+            \regex_match:nVT { \A[^\ ]*:\d+:\d+(?:-\d+)?:\ error } \l__mhs_ghc_first_str
+              { \prop_gput:NVn \g__mhs_ghc_errors_prop \l__mhs_ghc_key_str { } }
+            \seq_map_inline:Nn \l__mhs_ghc_buffer_seq
+              {
+                \regex_match:nnT { \A\*\*\*\ Exception } {##1}
+                  { \prop_gput:NVn \g__mhs_ghc_errors_prop \l__mhs_ghc_key_str { } \seq_map_break: }
+              }
+          }
+      }
+    \seq_clear:N \l__mhs_ghc_buffer_seq
+  }
+\cs_new:Npn \__mhs_ghc_braced:n #1 { { \exp_not:n {#1} } }
+
+\AtBeginDocument
+  {
+    \file_if_exist:nT { \c__mhs_ghc_out_str } { \__mhs_ghc_read_out: }
+    % so that the aux file still works without the option ghc
+    \__mhs_ghc_aux:e
+      {
+        \token_to_str:N \providecommand \token_to_str:N \mhs@ghc@key [2] { }
+        \token_to_str:N \providecommand \token_to_str:N \mhs@ghc@md [1] { }
+      }
+  }
+\cs_new_protected:Npn \__mhs_ghc_aux:e #1 { \legacy_if:nT { @filesw } { \iow_now:Ne \@auxout {#1} } }
+
+\cs_new_protected:Npn \__mhs_ghc_write:
+  {
+    \iow_open:Nn \g__mhs_ghc_iow { \c__mhs_ghc_script_str }
+    % unbuffered, so answers (stdout) and errors (stderr) stay in order
+    \iow_now:Nn \g__mhs_ghc_iow { System.IO.hSetBuffering~System.IO.stdout~System.IO.NoBuffering }
+    \seq_map_inline:Nn \g__mhs_ghc_setup_seq { \iow_now:Nn \g__mhs_ghc_iow {##1} }
+    \str_set:Nn \l__mhs_ghc_ctx_str { \q_no_value }
+    \int_zero:N \l__mhs_ghc_n_int
+    \seq_map_inline:Nn \g__mhs_ghc_queries_seq { \__mhs_ghc_write:nnn ##1 }
+    \iow_close:N \g__mhs_ghc_iow
+  }
+% #1 context, #2 line, #3 key
+\cs_new_protected:Npn \__mhs_ghc_write:nnn #1#2#3
+  {
+    \str_if_eq:VnF \l__mhs_ghc_ctx_str {#1}
+      {
+        % a new context: the file before the '|' (sessions add '|<n>')
+        \str_set:Nn \l__mhs_ghc_ctx_str {#1}
+        \iow_now:Ne \g__mhs_ghc_iow { \__mhs_ghc_marker:n { load:#1 } }
+        \iow_now:Ne \g__mhs_ghc_iow { :load \__mhs_ghc_file:w #1 | \q_stop }
+        % the md5 sum of the file, so that the script changes with it
+        \iow_now:Ne \g__mhs_ghc_iow { \__mhs_ghc_marker:n { file: \__mhs_ghc_hash:w #1 | \q_stop } }
+        \seq_map_inline:Nn \g__mhs_ghc_import_seq { \iow_now:Nn \g__mhs_ghc_iow { import~##1 } }
+      }
+    \int_incr:N \l__mhs_ghc_n_int
+    \iow_now:Ne \g__mhs_ghc_iow { \__mhs_ghc_marker:n { \int_use:N \l__mhs_ghc_n_int } }
+    \str_set_convert:Nnnn \l__mhs_ghc_key_str {#3} { } { utf8/hex }
+    \__mhs_ghc_aux:e { \token_to_str:N \mhs@ghc@key { \int_use:N \l__mhs_ghc_n_int } { \l__mhs_ghc_key_str } }
+    \exp_args:NNV \seq_set_split:Nnn \l__mhs_ghc_buffer_seq \c__mhs_ghc_nl_str {#2}
+    % an evaluation (not a command like ':t') ends with the statistics of GHCi,
+    % '(0.01 secs, 123,456 bytes)', for \mhsGhcTime
+    \str_if_eq:eeTF { \str_head:n {#2} } { : }
+      { \seq_map_inline:Nn \l__mhs_ghc_buffer_seq { \iow_now:Nn \g__mhs_ghc_iow {##1} } }
+      {
+        \iow_now:Nn \g__mhs_ghc_iow { :set~+s }
+        \seq_map_inline:Nn \l__mhs_ghc_buffer_seq { \iow_now:Nn \g__mhs_ghc_iow {##1} }
+        \iow_now:Nn \g__mhs_ghc_iow { :unset~+s }
+      }
+  }
+\cs_new:Npn \__mhs_ghc_file:w #1 | #2 \q_stop { \tl_if_empty:nF {#1} { ~*#1 } }
+\cs_new:Npn \__mhs_ghc_hash:w #1 | #2 \q_stop { \tl_if_empty:nF {#1} { \file_mdfive_hash:n {#1} } }
+
+% GHCi runs where TeX writes its files, TeX Live exports -output-directory
+\cs_new:Npn \__mhs_ghc_command:
+  {
+    \sys_if_platform_windows:TF
+      {
+        ( if~defined~TEXMF_OUTPUT_DIRECTORY~
+          cd~/d~" \c_percent_str TEXMF_OUTPUT_DIRECTORY \c_percent_str " )~&~
+      }
+      { cd~"\c_dollar_str\c_left_brace_str TEXMF_OUTPUT_DIRECTORY:-.\c_right_brace_str"~&&~ }
+    \g__mhs_ghc_cmd_tl \c_space_tl \g__mhs_ghc_flags_tl
+    \c_space_tl < \c_space_tl \c__mhs_ghc_script_str
+    \c_space_tl > \c_space_tl \c__mhs_ghc_out_str \c_space_tl 2>&1
+  }
+
+\AtEndDocument
+  {
+    \seq_if_empty:NF \g__mhs_ghc_queries_seq
+      {
+        \__mhs_ghc_write:
+        \str_set:Ne \l__mhs_ghc_key_str { \file_mdfive_hash:n { \c__mhs_ghc_script_str } }
+        \file_if_exist:nF { \c__mhs_ghc_out_str } { \str_gclear:N \g__mhs_ghc_lastmdfive_str }
+        \str_if_eq:VVF \l__mhs_ghc_key_str \g__mhs_ghc_lastmdfive_str
+          {
+            \bool_lazy_or:nnTF
+              { \str_if_eq_p:Vn \g__mhs_ghc_run_str { always } }
+              { \str_if_eq_p:Vn \g__mhs_ghc_run_str { auto } && \int_compare_p:n { \ShellEscapeStatus = 1 } }
+              {
+                \ShellEscape { \__mhs_ghc_command: }
+                % GHCi answers with markers, without any the shell or GHC failed
+                % (tools like stack may print other lines before)
+                \str_clear:N \l__mhs_ghc_first_str
+                \bool_set_false:N \l__mhs_ghc_ok_bool
+                \file_if_exist:nT { \c__mhs_ghc_out_str }
+                  {
+                    \ior_open:Nn \g__mhs_ghc_ior { \c__mhs_ghc_out_str }
+                    \ior_str_map_inline:Nn \g__mhs_ghc_ior
+                      {
+                        \str_if_empty:NT \l__mhs_ghc_first_str { \str_set:Nn \l__mhs_ghc_first_str {#1} }
+                        \regex_match:nnT { \A@@mhs: } {#1}
+                          { \bool_set_true:N \l__mhs_ghc_ok_bool \ior_map_break: }
+                      }
+                    \ior_close:N \g__mhs_ghc_ior
+                  }
+                \bool_if:NTF \l__mhs_ghc_ok_bool
+                  { \str_gset_eq:NN \g__mhs_ghc_lastmdfive_str \l__mhs_ghc_key_str }
+                  { \msg_warning:nnee { magic-haskell } { ghc-failed } { \l__mhs_ghc_first_str } { \__mhs_ghc_command: } }
+              }
+              {
+                \str_if_eq:VnTF \g__mhs_ghc_run_str { never } { \msg_info:nne } { \msg_warning:nne }
+                  { magic-haskell } { ghc-manual } { \__mhs_ghc_command: }
+              }
+            \bool_gset_true:N \g__mhs_ghc_rerun_bool
+          }
+        \__mhs_ghc_aux:e { \token_to_str:N \mhs@ghc@md { \g__mhs_ghc_lastmdfive_str } }
+        \bool_if:NT \g__mhs_ghc_rerun_bool { \msg_warning:nn { magic-haskell } { ghc-rerun } }
+      }
+  }
+\cs_new_protected:Npn \mhs@ghc@md #1 { \str_gset:Nn \g__mhs_ghc_lastmdfive_str {#1} }
+
+% #1 a line for GHCi (a string), #2 its context
+\cs_new_protected:Npn \__mhs_ghc_query:nn #1#2
+  {
+    \str_set:Ne \l__mhs_ghc_key_str { \__mhs_ghc_key:nn {#2} {#1} }
+    \__mhs_ghc_query_do:nn {#1} {#2}
+  }
+% the same, but every occurrence of a line is a query of its own (sessions)
+\cs_new_protected:Npn \__mhs_ghc_query_again:nn #1#2
+  {
+    \exp_args:Ne \__mhs_ghc_occurrence:n { \__mhs_ghc_key:nn {#2} {#1} }
+    \__mhs_ghc_query_do:nn {#1} {#2}
+  }
+% with the key in \l__mhs_ghc_key_str
+\cs_new_protected:Npn \__mhs_ghc_query_do:nn #1#2
+  {
+    \prop_if_in:NVF \g__mhs_ghc_known_prop \l__mhs_ghc_key_str
+      {
+        \prop_gput:NVn \g__mhs_ghc_known_prop \l__mhs_ghc_key_str { }
+        \seq_gput_right:Ne \g__mhs_ghc_queries_seq { {#2} {#1} { \l__mhs_ghc_key_str } }
+      }
+    \prop_get:NVNTF \g__mhs_ghc_answers_prop \l__mhs_ghc_key_str \l_mhs_ghc_lines_tl
+      { \bool_set_false:N \l_mhs_ghc_pending_bool }
+      {
+        \tl_clear:N \l_mhs_ghc_lines_tl
+        \bool_set_true:N \l_mhs_ghc_pending_bool
+        \bool_gset_true:N \g__mhs_ghc_rerun_bool
+      }
+    \str_set:Ne \l_mhs_ghc_answer_str
+      { \tl_trim_spaces:e { \tl_map_function:NN \l_mhs_ghc_lines_tl \__mhs_ghc_spaced:n } }
+    \prop_get:NVNTF \g__mhs_ghc_stats_prop \l__mhs_ghc_key_str \l__mhs_ghc_tmp_tl
+      { \exp_after:wN \__mhs_ghc_stats:nn \l__mhs_ghc_tmp_tl }
+      {
+        \bool_if:NT \l_mhs_ghc_pending_bool
+          { \str_gclear:N \g_mhs_ghc_ms_str \str_gclear:N \g_mhs_ghc_bytes_str }
+      }
+    \prop_if_in:NVTF \g__mhs_ghc_errors_prop \l__mhs_ghc_key_str
+      {
+        \bool_gset_true:N \g_mhs_ghc_error_bool
+        \msg_warning:nnnV { magic-haskell } { ghc-error } {#1} \l_mhs_ghc_answer_str
+        \__mhs_ghc_load_warning:n {#2}
+      }
+      { \bool_gset_eq:NN \g_mhs_ghc_error_bool \l_mhs_ghc_pending_bool }
+  }
+\cs_new:Npn \__mhs_ghc_spaced:n #1 { ~ #1 }
+% #1 seconds ('0.01'), #2 bytes with separators ('123,456')
+\cs_new_protected:Npn \__mhs_ghc_stats:nn #1#2
+  {
+    \str_gset:Ne \g_mhs_ghc_ms_str { \fp_eval:n { round(#1 * 1000) } }
+    \str_gset:Nn \g__mhs_ghc_bytes_str {#2}
+    \str_set:Nn \l__mhs_ghc_first_str {#2}
+    \str_remove_all:Nn \l__mhs_ghc_first_str { , }
+    \str_gset_eq:NN \g_mhs_ghc_bytes_str \l__mhs_ghc_first_str
+  }
+\cs_new_protected:Npn \__mhs_ghc_load_warning:n #1
+  {
+    \prop_get:NnNT \g__mhs_ghc_loaderr_prop {#1} \l__mhs_ghc_first_str
+      { \msg_warning:nnnV { magic-haskell } { ghc-load } {#1} \l__mhs_ghc_first_str }
+  }
+\cs_new_protected:Npn \__mhs_ghc_query:n #1
+  { \exp_args:Nne \__mhs_ghc_query:nn {#1} { \g__mhs_ghc_ctx_str } }
+
+% the type of #1: GHCi echoes the expression, the type follows it
+\cs_new_protected:Npn \__mhs_ghc_type:n #1
+  {
+    \exp_args:Ne \__mhs_ghc_query:n { :t~ \tl_trim_spaces:n {#1} }
+    \str_set:Ne \l__mhs_ghc_type_str { \tl_trim_spaces:n {#1} ~::~ }
+    \str_if_eq:eeTF
+      { \str_range:Nnn \l_mhs_ghc_answer_str { 1 } { \str_count:N \l__mhs_ghc_type_str } }
+      { \l__mhs_ghc_type_str }
+      {
+        \str_set:Ne \l__mhs_ghc_type_str
+          { \str_range:Nnn \l_mhs_ghc_answer_str { \str_count:N \l__mhs_ghc_type_str + 1 } { -1 } }
+      }
+      {
+        \regex_extract_once:nVNTF { \A.*\ ::\ (.*)\Z } \l_mhs_ghc_answer_str \l__mhs_ghc_match_seq
+          { \str_set:Ne \l__mhs_ghc_type_str { \seq_item:Nn \l__mhs_ghc_match_seq { 2 } } }
+          { \str_set_eq:NN \l__mhs_ghc_type_str \l_mhs_ghc_answer_str }
+      }
+  }
+
+% #1: what to show if all went well
+\cs_new_protected:Npn \__mhs_ghc_show:n #1
+  {
+    \bool_if:NTF \l_mhs_ghc_pending_bool { \mhsGhcPending }
+      { \bool_if:NTF \g_mhs_ghc_error_bool { \exp_args:NV \mhsGhcError \l_mhs_ghc_answer_str } {#1} }
+  }
+
+% Every input line is answered in turn. In beamer, the steps appear one
+% after the other, like the reductions of lc-visualizer.
+\int_new:N \g__mhs_ghc_session_int
+\seq_new:N \l__mhs_ghc_inputs_seq
+\seq_new:N \l__mhs_ghc_steps_seq   % per input: {line}{line}...
+\str_new:N \l__mhs_ghc_file_str
+\tl_new:N  \l__mhs_ghc_opts_tl
+\tl_new:N  \l__mhs_ghc_listing_tl
+\bool_new:N \l__mhs_ghc_animate_bool
+\int_new:N \l__mhs_ghc_start_int
+\keys_define:nn { magic-haskell / session }
+  {
+    animate .bool_set:N = \l__mhs_ghc_animate_bool ,
+    start   .int_set:N  = \l__mhs_ghc_start_int ,
+    listing .tl_set:N   = \l__mhs_ghc_listing_tl ,
+  }
+
+% #1 options, #2 file with the inputs
+\cs_new_protected:Npn \__mhs_ghc_session:nn #1#2
+  {
+    \group_begin:
+    \bool_set:Nn \l__mhs_ghc_animate_bool { \cs_if_exist_p:c { ver@beamer.cls } }
+    \int_set:Nn \l__mhs_ghc_start_int { 1 }
+    \keys_set:nn { magic-haskell / session } {#1}
+    \int_gincr:N \g__mhs_ghc_session_int
+    \prop_clear:N \l__mhs_ghc_occ_prop
+    \seq_clear:N \l__mhs_ghc_inputs_seq
+    \ior_open:Nn \g__mhs_ghc_ior {#2}
+    % an input is a line, or a block from ':{' to ':}'
+    \bool_set_false:N \l__mhs_ghc_block_bool
+    \ior_str_map_inline:Nn \g__mhs_ghc_ior
+      {
+        \bool_if:NTF \l__mhs_ghc_block_bool
+          {
+            \str_put_right:Ne \l__mhs_ghc_block_str { \c__mhs_ghc_nl_str ##1 }
+            \str_if_eq:eeT {##1} { : \c_right_brace_str }
+              {
+                \bool_set_false:N \l__mhs_ghc_block_bool
+                \seq_put_right:NV \l__mhs_ghc_inputs_seq \l__mhs_ghc_block_str
+              }
+          }
+          {
+            \str_if_eq:eeTF {##1} { : \c_left_brace_str }
+              { \bool_set_true:N \l__mhs_ghc_block_bool \str_set:Nn \l__mhs_ghc_block_str {##1} }
+              { \str_if_empty:nF {##1} { \seq_put_right:Nn \l__mhs_ghc_inputs_seq {##1} } }
+          }
+      }
+    \ior_close:N \g__mhs_ghc_ior
+    % every session is a GHCi context of its own, so its bindings stay apart;
+    % it is named by its inputs, as beamer typesets a frame once per overlay
+    \str_set:Ne \l__mhs_ghc_ctx_str { \seq_use:Nn \l__mhs_ghc_inputs_seq { ~;~ } }
+    \str_set:Ne \l__mhs_ghc_ctx_str
+      { \g__mhs_ghc_ctx_str | \exp_args:NV \str_mdfive_hash:n \l__mhs_ghc_ctx_str }
+    \seq_clear:N \l__mhs_ghc_steps_seq
+    \seq_map_inline:Nn \l__mhs_ghc_inputs_seq
+      {
+        \exp_args:NnV \__mhs_ghc_query_again:nn {##1} \l__mhs_ghc_ctx_str
+        \__mhs_ghc_prompts:n {##1}
+        \seq_put_right:Ne \l__mhs_ghc_steps_seq
+          {
+            \exp_not:V \l__mhs_ghc_tmp_tl
+            \bool_if:NTF \l_mhs_ghc_pending_bool { { out>?? } }
+              { \tl_map_function:NN \l_mhs_ghc_lines_tl \__mhs_ghc_out:n }
+          }
+      }
+    \int_set:Nn \l__mhs_ghc_n_int { \seq_count:N \l__mhs_ghc_steps_seq }
+    \bool_if:NTF \l__mhs_ghc_animate_bool
+      {
+        \int_step_inline:nn { \l__mhs_ghc_n_int }
+          {
+            \__mhs_ghc_session_file:n {##1}
+            \use:e
+              {
+                \exp_not:N \only
+                < \int_eval:n { \l__mhs_ghc_start_int + ##1 - 1 }
+                  \int_compare:nNnT {##1} = \l__mhs_ghc_n_int { - } >
+              }
+              { \__mhs_ghc_session_typeset: }
+          }
+      }
+      { \__mhs_ghc_session_file:n { \int_use:N \l__mhs_ghc_n_int } \__mhs_ghc_session_typeset: }
+    \group_end:
+  }
+\cs_new:Npn \__mhs_ghc_out:n #1 { { out> \exp_not:n {#1} } }
+% the lines of an input, with the prompts of GHCi ('ghci|' continues a block)
+\cs_new_protected:Npn \__mhs_ghc_prompts:n #1
+  {
+    \exp_args:NNV \seq_set_split:Nnn \l__mhs_ghc_buffer_seq \c__mhs_ghc_nl_str {#1}
+    \seq_pop_left:NN \l__mhs_ghc_buffer_seq \l__mhs_ghc_first_str
+    \tl_set:Ne \l__mhs_ghc_tmp_tl
+      {
+        { ghci> ~ \exp_not:V \l__mhs_ghc_first_str }
+        \seq_map_function:NN \l__mhs_ghc_buffer_seq \__mhs_ghc_continue:n
+      }
+  }
+\cs_new:Npn \__mhs_ghc_continue:n #1 { { ghci| ~ \exp_not:n {#1} } }
+
+% the session up to step #1; later steps are blank lines, so that every
+% overlay has the same height
+\cs_new_protected:Npn \__mhs_ghc_session_file:n #1
+  {
+    \str_set:Ne \l__mhs_ghc_file_str
+      { \c_sys_jobname_str -mhs-session- \int_use:N \g__mhs_ghc_session_int - #1 .txt }
+    \iow_open:Nn \g__mhs_ghc_iow { \l__mhs_ghc_file_str }
+    \seq_map_indexed_inline:Nn \l__mhs_ghc_steps_seq
+      {
+        \tl_map_inline:nn {##2}
+          { \iow_now:Ne \g__mhs_ghc_iow { \int_compare:nNnF {##1} > {#1} { \exp_not:n {####1} } } }
+      }
+    \iow_close:N \g__mhs_ghc_iow
+  }
+\cs_new_protected:Npn \__mhs_ghc_session_typeset:
+  {
+    \use:e
+      {
+        \exp_not:N \mhs@ghc@input { lGHCi }
+          { numbers=none, showlines=true, escapeinside={}{}, \exp_not:V \l__mhs_ghc_listing_tl } { \l__mhs_ghc_file_str }
+      }
+  }
+
+% types: \mhsType{expr} (verbatim), \mhsType*{expr} gives 'expr :: type';
+% \mhsTypeOf takes a regular argument, e.g. in an escape of a listing
+\NewDocumentCommand \mhsType { s v } { \__mhs_ghc_type_show:nn {#1} {#2} }
+\NewDocumentCommand \mhsTypeOf { s m } { \__mhs_ghc_arg:n {#2} \exp_args:NnV \__mhs_ghc_type_show:nn {#1} \l__mhs_ghc_arg_str }
+\cs_new_protected:Npn \__mhs_ghc_type_show:nn #1#2
+  {
+    \__mhs_ghc_type:n {#2}
+    \__mhs_ghc_show:n
+      {
+        \bool_if:NTF #1
+          { \exp_args:NV \mhsGhcFormat \l_mhs_ghc_answer_str }
+          { \exp_args:NV \mhsGhcFormat \l__mhs_ghc_type_str }
+      }
+  }
+\NewDocumentCommand \mhsGhcTypeInto { m m }
+  { \__mhs_ghc_arg:n {#2} \exp_args:NV \__mhs_ghc_type:n \l__mhs_ghc_arg_str \tl_set:NV #1 \l__mhs_ghc_type_str }
+\NewDocumentCommand \mhsGhcEvalInto { m m }
+  {
+    \__mhs_ghc_arg:n {#2}
+    \exp_args:Ne \__mhs_ghc_query:n { \exp_args:NV \tl_trim_spaces:n \l__mhs_ghc_arg_str }
+    \tl_set:NV #1 \l_mhs_ghc_answer_str
+  }
+
+% values: \mhsEval{expr} (verbatim) and \mhsEvalOf{expr}
+\NewDocumentCommand \mhsEval { v } { \__mhs_ghc_eval:n {#1} }
+\NewDocumentCommand \mhsEvalOf { m } { \__mhs_ghc_arg:n {#1} \exp_args:NV \__mhs_ghc_eval:n \l__mhs_ghc_arg_str }
+% the text of a regular argument, undoing what TeX did to it: a space after a
+% control word ('\x ->') unless a name goes on, doubled '#', escaped characters
+\str_new:N \l__mhs_ghc_arg_str
+\cs_new_protected:Npn \__mhs_ghc_arg:n #1
+  {
+    \tl_set:Nn \l__mhs_ghc_tmp_tl {#1}
+    \regex_replace_all:nnN { \cP. } { \cO\# } \l__mhs_ghc_tmp_tl % no doubled '#'
+    \str_set:NV \l__mhs_ghc_arg_str \l__mhs_ghc_tmp_tl
+    \regex_replace_all:nnN { (\\[A-Za-z]+)\ ([^A-Za-z0-9_']|\Z) } { \1\2 } \l__mhs_ghc_arg_str
+    \regex_replace_all:nnN { \\([\%\#\&\$\_\{\}]) } { \1 } \l__mhs_ghc_arg_str
+  }
+\cs_new_protected:Npn \__mhs_ghc_eval:n #1
+  {
+    \exp_args:Ne \__mhs_ghc_query:n { \tl_trim_spaces:n {#1} }
+    \__mhs_ghc_show:n { \exp_args:NV \mhsGhcFormat \l_mhs_ghc_answer_str }
+  }
+
+% \begin{ghcisession}[animate, start=2, listing={...}] inputs \end{ghcisession}
+% The catcodes turn verbatim before looking for the options, so the first
+% input stays unread; the options are read again with the usual catcodes.
+\NewDocumentCommand \mhsGhcSessionSetup { m } { \tl_gset:Nn \g__mhs_ghc_opts_tl {#1} }
+\tl_new:N \g__mhs_ghc_opts_tl
+\newenvironment { ghcisession }
+  {
+    \tl_set_eq:NN \l__mhs_ghc_opts_tl \g__mhs_ghc_opts_tl
+    \cs_set_eq:NN \do \@makeother \dospecials \char_set_catcode_active:N \^^M
+    \peek_meaning:NTF [ \__mhs_ghc_session_opts:w \__mhs_ghc_session_start:
+  }
+  {
+    \iow_close:N \g__mhs_ghc_iow
+    \exp_args:NV \__mhs_ghc_session:nn \l__mhs_ghc_opts_tl { \c_sys_jobname_str -mhs-session.tmp }
+  }
+\cs_new_protected:Npn \__mhs_ghc_session_opts:w [ #1 ]
+  {
+    \tl_set_rescan:Nnn \l__mhs_ghc_tmp_tl
+      {
+        \char_set_catcode_escape:N \\ \char_set_catcode_group_begin:N \{
+        \char_set_catcode_group_end:N \} \char_set_catcode_space:N \ %
+      }
+      {#1}
+    \tl_put_right:Ne \l__mhs_ghc_opts_tl { , \exp_not:V \l__mhs_ghc_tmp_tl }
+    \__mhs_ghc_session_start:
+  }
+\tl_new:N \l__mhs_ghc_tmp_tl
+% verbatim@start expects the verbatim catcodes
+\cs_new_protected:Npn \__mhs_ghc_session_start:
+  {
+    \iow_open:Nn \g__mhs_ghc_iow { \c_sys_jobname_str -mhs-session.tmp }
+    \cs_set_protected:Npn \verbatim@processline { \iow_now:Ne \g__mhs_ghc_iow { \the \verbatim@line } }
+    \verbatim@start
+  }
+
+\NewDocumentCommand \mhsGhcIfError { +m +m } { \bool_if:NTF \g_mhs_ghc_error_bool {#1} {#2} }
+% the time of the last evaluation in milliseconds and the memory it allocated
+% in bytes ('10', '123456', empty while there is no answer yet), expandable
+% for computations, and formatted ('10 ms', '123,456 bytes')
+\cs_new:Npn \mhsGhcTime { \str_use:N \g_mhs_ghc_ms_str }
+\cs_new:Npn \mhsGhcMemory { \str_use:N \g_mhs_ghc_bytes_str }
+\NewDocumentCommand \mhsGhcTimeText { }
+  { \__mhs_ghc_stat:NNn \g_mhs_ghc_ms_str \g_mhs_ghc_ms_str { \,ms } }
+\NewDocumentCommand \mhsGhcMemoryText { }
+  { \__mhs_ghc_stat:NNn \g_mhs_ghc_bytes_str \g__mhs_ghc_bytes_str { \c_space_tl bytes } }
+% #1 the value, #2 its text, #3 the unit
+\cs_new_protected:Npn \__mhs_ghc_stat:NNn #1#2#3
+  { \str_if_empty:NTF #1 { \mhsGhcPending } { #2 #3 } }
+\NewDocumentCommand \mhsGhcLoad { m }
+  {
+    \str_gset:Ne \g__mhs_ghc_ctx_str {#1}
+    \__mhs_ghc_load_warning:n {#1}
+  }
+\NewDocumentCommand \mhsGhcUnload { } { \str_gclear:N \g__mhs_ghc_ctx_str }
+\NewDocumentCommand \mhsGhcImport { m } { \clist_map_inline:nn {#1} { \seq_gput_right:Nn \g__mhs_ghc_import_seq {##1} } }
+\NewDocumentCommand \mhsGhcSetup { v } { \seq_gput_right:Nn \g__mhs_ghc_setup_seq {#1} }
+\NewDocumentCommand \mhsGhcCommand { m } { \tl_gset:Nn \g__mhs_ghc_cmd_tl {#1} }
+\NewDocumentCommand \mhsGhcFlags { m } { \tl_gput_right:Nn \g__mhs_ghc_flags_tl { ~#1 } }
+\NewDocumentCommand \mhsGhcRun { m } { \str_gset:Nn \g__mhs_ghc_run_str {#1} }
+\NewDocumentCommand \mhsGhcFormat { m } { \mhs@ghc@format {#1} }
+\NewDocumentCommand \mhsGhcError { m } { \mhs@ghc@error {#1} }
+\NewDocumentCommand \mhsGhcPending { } { \mhs@ghc@pending }
+\ExplSyntaxOff
+
+% listings do not nest: within one (e.g. in an escape) answers are plain text
+\def\mhs@ghc@format#1{\ifnum\lst@mode=\lst@nomode\csname b\mhsLanguage\endcsname{#1}\else#1\fi}
+% #1 language, #2 options, #3 file; in the style of the fakeminted environment
+% (xlistings' option 'style'), as the examples of a document usually are
+\def\mhs@ghc@input#1#2#3{\begingroup
+  \ifdefined\xlst@minted@style
+    \protected@edef\mhs@t{style=\pgfkeysvalueof{/xlst@lst@family/\xlst@minted@style/listing style},}%
+  \else\def\mhs@t{}\fi
+  \expandafter\endgroup\expandafter\lstinputlisting\expandafter[\mhs@t language=#1,#2]{#3}}
+\def\mhs@ghc@error#1{\textcolor{xlsterror}{\textbf{??}}}
+\def\mhs@ghc@pending{\textbf{??}}
+\newcommand*\mhsGhcSetFormat[1]{\def\mhs@ghc@format##1{#1}}
+\newcommand*\mhsGhcSetErrorFormat[1]{\def\mhs@ghc@error##1{#1}}
+
+% a Haskell file written from the document, typeset, and loaded for queries
+% #1 listing options, #2 file name
+\newenvironment{mhsfile}[2][]{%
+  \def\mhs@ghc@file{#2}\def\mhs@ghc@fileopts{#1}%
+  \VerbatimEnvironment\begin{VerbatimOut}{#2}}
+  {\end{VerbatimOut}%
+  \mhsGhcLoad{\mhs@ghc@file}%
+  \edef\mhs@t{\noexpand\mhs@ghc@input{lMagicHaskell}{\unexpanded\expandafter{\mhs@ghc@fileopts}}{\mhs@ghc@file}}\mhs@t}
+\endinput

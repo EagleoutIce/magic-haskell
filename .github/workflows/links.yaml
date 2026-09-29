@@ -1,0 +1,20 @@
+name: verify links
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - magic-haskell-links.cfg
+      - tools/**
+  schedule:
+    # weekly, so links that break on Hackage are caught without a push
+    - cron: "27 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify every link of the database against Hackage
+        run: tools/generate-links.sh --verify

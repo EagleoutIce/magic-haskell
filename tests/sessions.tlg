@@ -1,0 +1,34 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST: session
+\g__mhs_ghc_iow=\write...
+Package magic-haskell Warning: GHCi cannot answer 'head []': *** Exception: Prelude.head: empty list CallStack (from HasCallStack):   error, called at libraries/ghc-internal/src/GHC/Internal/List.hs:2030:3 in ghc-internal:GHC.Internal.List   errorEmptyList, called at libraries/ghc-internal/src/GHC/Internal/List.hs:96:11 in ghc-internal:GHC.Internal.List   badHead, called at libraries/ghc-internal/src/GHC/Internal/List.hs:90:28 in ghc-internal:GHC.Internal.List   head, called at <interactive>:25:1 in interactive:Ghci19
+SESSION: ghci> let x = 1
+SESSION: ghci> x
+SESSION: out>1
+SESSION: ghci> let x = 2
+SESSION: ghci> x
+SESSION: out>2
+SESSION: ghci> putStr "no newline"
+SESSION: out>no newline
+SESSION: ghci> "a!*b{#%}"
+SESSION: out>"a!*b{#%}"
+SESSION: ghci> :{
+SESSION: ghci| f :: Int -> Int
+SESSION: ghci| f y = y + 1
+SESSION: ghci| :}
+SESSION: ghci> f 41
+SESSION: out>42
+SESSION: ghci> head []
+SESSION: out>*** Exception: Prelude.head: empty list
+SESSION: out>CallStack (from HasCallStack):
+SESSION: out>  error, called at libraries/ghc-internal/src/GHC/Internal/List.hs:2030:3 in ghc-internal:GHC.Internal.List
+SESSION: out>  errorEmptyList, called at libraries/ghc-internal/src/GHC/Internal/List.hs:96:11 in ghc-internal:GHC.Internal.List
+SESSION: out>  badHead, called at libraries/ghc-internal/src/GHC/Internal/List.hs:90:28 in ghc-internal:GHC.Internal.List
+SESSION: out>  head, called at <interactive>:25:1 in interactive:Ghci19
+============================================================
+TEST: options
+Package magic-haskell Warning: GHCi cannot answer 'x': <interactive>:30:1: error: [GHC-88464] Variable not in scope: x
+SESSION: ghci> x
+SESSION: out><interactive>:30:1: error: [GHC-88464] Variable not in scope: x

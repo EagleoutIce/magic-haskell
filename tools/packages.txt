@@ -1,0 +1,16 @@
+# package  version (or 'latest')  modules ('*': all remaining ones)
+# Earlier modules win if two export a name; a package may appear again, so
+# the rarely used modules of base come last.
+base 4.22.0.0 Prelude Data.List Data.Maybe Data.Char Data.Either Data.Function Data.Foldable Data.Traversable Data.IORef Data.STRef Control.Monad Control.Monad.ST Control.Applicative Control.Exception System.IO System.Environment Text.Read
+transformers 0.6.3.0 Control.Monad.Trans.State.Strict Control.Monad.Trans.Reader Control.Monad.Trans.Writer.Strict Control.Monad.Trans.Maybe Control.Monad.Trans.Except Control.Monad.Trans.Class
+mtl 2.3.2 Control.Monad.State.Class Control.Monad.Reader.Class Control.Monad.Writer.Class Control.Monad.Error.Class
+containers 0.8 Data.Map.Strict Data.Set
+array 0.5.8.0 Data.Array Data.Array.ST
+bytestring 0.12.2.0 Data.ByteString
+text 2.1.4 Data.Text
+random 1.3.1 System.Random
+parsec 3.1.18.0 Text.Parsec *
+QuickCheck 2.19.0.0 Test.QuickCheck
+hspec 2.11.17 Test.Hspec
+hspec-expectations 0.8.4 Test.Hspec.Expectations
+base 4.22.0.0 *

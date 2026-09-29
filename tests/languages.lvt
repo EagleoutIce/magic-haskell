@@ -1,0 +1,38 @@
+% Every environment and command the package registers typesets.
+\input{regression-test}
+\documentclass{article}
+\usepackage[packages={base,parsec,hspec-expectations,random}]{magic-haskell}
+\usepackage{hyperref}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\TEST{inline}{\Typeset{\bmhs{x}\cmhs{x}\bghci{ghci> x}}}
+\BeginBox{mhs}
+\begin{mhs}
+{-# LANGUAGE LambdaCase #-}
+f @Int \x -> x -- !*\textit{escape}*!
+\end{mhs}
+\EndBox
+\BeginBox{mhs*}
+\begin{mhs*}
+f = |warn|g|warn| |err|h|err|
+\end{mhs*}
+\EndBox
+\BeginBox{plainmhs}
+\begin{plainmhs}
+f = runST (newSTRef 0)
+\end{plainmhs}
+\EndBox
+\BeginBox{ghci}
+\begin{ghci}
+ghci> :t fmap
+out>fmap :: Functor f => (a -> b) -> f a -> f b
+\end{ghci}
+\EndBox
+\BeginBox{minted}
+\begin{minted}{mhs}
+x = shouldBe (many1 digit) randomRIO
+\end{minted}
+\EndBox
+\END

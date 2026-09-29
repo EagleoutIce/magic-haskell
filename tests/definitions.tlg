@@ -1,0 +1,154 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST: definitions
+TARGET: mhs.3.Tree
+TARGET: mhs.3.Leaf
+TARGET: mhs.3.Node
+INTERNAL: mhs.3.Tree
+INTERNAL: mhs.3.Tree
+TARGET: mhs.3.size
+COPY: ::
+INTERNAL: mhs.3.Tree
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.3.size
+INTERNAL: mhs.3.Leaf
+TARGET: mhs.3.twice2
+TARGET: mhs.3.map
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Data-List.html\#v:insert
+INTERNAL: mhs.3.map
+============================================================
+TEST 1: uses
+============================================================
+INTERNAL: mhs.3.size
+INTERNAL: mhs.3.Node
+INTERNAL: mhs.3.Leaf
+INTERNAL: mhs.3.Leaf
+INTERNAL: mhs.3.map
+INTERNAL: mhs.3.twice2
+============================================================
+============================================================
+TEST 2: use before the definition
+============================================================
+INTERNAL: mhs.6.later
+============================================================
+============================================================
+TEST: a second definition
+TARGET: mhs.6.size
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.6.size
+TARGET: mhs.6.later
+INTERNAL: mhs.6.size
+TARGET: mhs.6.Wrap
+INTERNAL: mhs.6.Wrap
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+TARGET: mhs.6.Shape
+TARGET: mhs.6.Name
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:String
+============================================================
+TEST 3: the last definition before
+============================================================
+INTERNAL: mhs.6.size
+INTERNAL: mhs.6.Wrap
+INTERNAL: mhs.6.Shape
+INTERNAL: mhs.6.Name
+============================================================
+============================================================
+TEST 4: inline code defines nothing
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/GHC-Base.html\#v:inline
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/GHC-Base.html\#v:inline
+============================================================
+============================================================
+TEST: switched off
+============================================================
+TEST 5: not defined
+============================================================
+============================================================
+============================================================
+TEST: local definitions
+TARGET: mhs.12.fib
+INTERNAL: mhs.12.go
+TARGET: mhs.12.go
+INTERNAL: mhs.12.go
+INTERNAL: mhs.12.go
+TARGET: mhs.12.main
+TARGET: mhs.12.sq
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:print
+INTERNAL: mhs.12.sq
+============================================================
+TEST 6: local definitions stay local
+============================================================
+INTERNAL: mhs.12.fib
+============================================================
+============================================================
+TEST 7: default module
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Data-List.html\#v:insert
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:lookup
+============================================================
+============================================================
+TEST 8: active modules
+============================================================
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:insert
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:lookup
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:filter
+============================================================
+============================================================
+TEST 9: inactive
+============================================================
+============================================================
+============================================================
+TEST 10: listing key
+============================================================
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Set.html\#v:insert
+============================================================
+============================================================
+TEST: comments define nothing
+TARGET: mhs.18.Foo
+TARGET: mhs.18.A
+TARGET: mhs.18.D
+============================================================
+TEST 11: only code defines
+============================================================
+INTERNAL: mhs.18.Foo
+INTERNAL: mhs.18.A
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/GHC-Generics.html\#t:C
+INTERNAL: mhs.18.D
+============================================================
+============================================================
+TEST: several bindings in where and let
+TARGET: mhs.20.sumAll
+COPY: ::
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+COPY: ->
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Int
+INTERNAL: mhs.20.sumAll
+INTERNAL: mhs.20.go
+TARGET: mhs.20.go
+INTERNAL: mhs.20.go
+INTERNAL: mhs.20.go
+INTERNAL: mhs.20.step
+TARGET: mhs.20.step
+TARGET: mhs.20.z
+TARGET: mhs.20.w
+INTERNAL: mhs.20.z
+INTERNAL: mhs.20.w
+TARGET: mhs.20.done
+============================================================
+TEST 12: local bindings stay in their listing
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Text-ParserCombinators-ReadPrec.html\#v:step
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/GHC-Arr.html\#v:done
+============================================================
+============================================================
+TEST: definitions local to their listing
+TARGET: mhs.22.helper
+TARGET: mhs.22.use
+INTERNAL: mhs.22.helper
+============================================================
+TEST 13: not visible outside
+============================================================
+============================================================

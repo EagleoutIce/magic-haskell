@@ -1,0 +1,76 @@
+name: compile magic-haskell
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install TeX Live
+        uses: zauguin/install-texlive@v4
+        with:
+          package_file: tl_packages
+
+      - name: '✅ Run the test suite'
+        run: l3build check
+
+      - name: '🔍 Upload the test output for inspection'
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-output
+          path: |
+            /tmp/magic-haskell/test/*.log
+            /tmp/magic-haskell/test/*.diff
+          if-no-files-found: ignore
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install TeX Live
+        uses: zauguin/install-texlive@v4
+        with:
+          package_file: tl_packages
+
+      - name: Install GHC
+        run: sudo apt-get install -y ghc
+
+      - name: Build example and documentation
+        env:
+          TEXINPUTS: ./xlistings//:
+        run: |
+          pdflatex example.tex
+          pdflatex -shell-escape example-beamer.tex
+          pdflatex -shell-escape example-beamer.tex
+          pdflatex -shell-escape magic-haskell-doc.tex
+          pdflatex -shell-escape magic-haskell-doc.tex
+          makeindex magic-haskell-doc
+          pdflatex -shell-escape magic-haskell-doc.tex
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: result
+          path: |
+            example.pdf
+            example-beamer.pdf
+            magic-haskell-doc.pdf

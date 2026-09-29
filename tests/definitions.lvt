@@ -1,0 +1,90 @@
+% Names defined in the document link to their definition, active modules
+% choose among the modules that export a name.
+\input{regression-test}
+\documentclass{article}
+\usepackage{magic-haskell}
+\usepackage{hyperref}
+\usepackage{mhstest}
+\begin{document}
+\WarmUp
+\START
+\BeginBox{definitions}
+\begin{mhs}
+data Tree = Leaf | Node Tree Tree
+size :: Tree -> Int
+size Leaf = 1
+twice2 x = x
+map f = f
+insert map
+\end{mhs}
+\EndBox
+\TEST{uses}{\Typeset{\bmhs{size (Node Leaf Leaf) + map 1 + twice2}}}
+\TEST{use before the definition}{\Typeset{\bmhs{later}}}
+\BeginBox{a second definition}
+\begin{mhs}
+size :: Int
+size = 2
+later = size
+newtype Wrap = Wrap Int
+class Shape s where
+type Name = String
+\end{mhs}
+\EndBox
+\TEST{the last definition before}{\Typeset{\bmhs{size Wrap Shape Name}}}
+\TEST{inline code defines nothing}{\Typeset{\bmhs{inline = 1}}\Typeset{\bmhs{inline}}}
+\BeginBox{switched off}
+\begin{mhs}[mhsdefinitions=false]
+nothing = 1
+\end{mhs}
+\EndBox
+\TEST{not defined}{\Typeset{\bmhs{nothing}}}
+\BeginBox{local definitions}
+\begin{mhs}
+fib n = go n 0 1
+  where go 0 a _ = a
+        go k a b = go (k - 1) b (a + b)
+main = let sq x = x * x in print (sq 3)
+\end{mhs}
+\EndBox
+\TEST{local definitions stay local}{\Typeset{\bmhs{go sq fib}}}
+\TEST{default module}{\Typeset{\bmhs{insert lookup}}}
+\TEST{active modules}{\mhsModules{Data.Map.Strict,Prelude}\Typeset{\bmhs{insert lookup filter}}\mhsModules{}}
+\TEST{inactive}{\mhsModules{Data.Set}\Typeset{\bmhs{lookup}}\mhsModules{}}
+\TEST{listing key}{\Typeset{\bmhs[modules={Data.Set}]{insert}}}
+\BeginBox{comments define nothing}
+\begin{mhs}
+-- helper = 1
+{- other = 2
+more = 3 -}
+cmt -- = no
+also -- :: no
+data Foo = A -- | B
+  -- | C
+  | D
+\end{mhs}
+\EndBox
+\TEST{only code defines}{\Typeset{\bmhs{helper other more cmt also Foo A B C D}}}
+\BeginBox{several bindings in where and let}
+\begin{mhs}
+sumAll :: [Int] -> Int
+sumAll xs = go xs 0
+  where
+    go [] acc = acc
+    go (y:ys) acc = go ys (step y acc)
+    step y acc = let z = y + acc
+                     w = z
+                 in w
+    done = 0
+    -- skip = 1
+      notAName = 2
+\end{mhs}
+\EndBox
+\TEST{local bindings stay in their listing}{\Typeset{\bmhs{go step z w done skip notAName}}}
+\BeginBox{definitions local to their listing}
+\begin{mhs}[mhsdefinitions=local]
+helper = 1
+use = helper
+\end{mhs}
+\EndBox
+\TEST{not visible outside}{\Typeset{\bmhs{helper use}}}
+\END

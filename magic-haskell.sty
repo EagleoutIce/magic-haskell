@@ -1,0 +1,482 @@
+% magic-haskell.sty
+% Haskell listings for xlistings: names link to their documentation on
+% Hackage or to their definition, operators become ligatures that copy as
+% plain text.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{magic-haskell}[2026/09/29 version v1.0 Haskell listings with Hackage links]
+
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=mhs,prefix=mhs@}
+% #1 bool or string, #2 option, #3 default
+\def\mhs@option#1#2#3{\ifx b#1\DeclareBoolOption[#3]{#2}\else\DeclareStringOption[#3]{#2}\fi}
+\mhs@option b{links}{true}
+\mhs@option b{ligatures}{true}
+\mhs@option b{tight}{true}
+\mhs@option b{underline}{true}
+\mhs@option s{packages}{all}
+\mhs@option s{database}{magic-haskell-links}
+\mhs@option s{language}{mhs}
+\mhs@option b{ghc}{false}
+\mhs@option s{xlistings}{}
+\ProcessKeyvalOptions*
+\let\mhsLanguage\mhs@language
+\edef\mhs@packages{\noexpand\zap@space\mhs@packages\space\noexpand\@empty}
+\edef\mhs@packages{\mhs@packages}
+
+\expandafter\RequirePackage\expandafter[\mhs@xlistings]{xlistings}
+\RequirePackage{etoolbox}
+
+% \mhs@map\f{text} passes each character of the text to \f, which appends to
+% \mhs@out; a '\' that escapes a character ('\$') is dropped
+\def\mhs@map#1#2{\def\mhs@out{}\let\mhs@f#1\expandafter\mhs@map@\detokenize{#2}\@nil}
+\def\mhs@map@#1{\ifx\@nil#1\else\ifnum`#1=92 \else\mhs@f#1\fi\expandafter\mhs@map@\fi}
+\def\mhs@keep#1{\edef\mhs@out{\mhs@out#1}}
+\def\mhs@apart#1{\edef\mhs@out{\mhs@out#1{}}}% no font ligatures ('>>')
+\def\mhs@count#1{\edef\mhs@out{\the\numexpr\mhs@out+1}}
+\def\mhs@len#1{\mhs@map\mhs@count{#1}\edef\mhs@out{\the\numexpr0\mhs@out}}
+\edef\mhs@upper{\detokenize{ABCDEFGHIJKLMNOPQRSTUVWXYZ}}
+\edef\mhs@lower{\detokenize{abcdefghijklmnopqrstuvwxyz_}}
+\edef\mhs@word{\mhs@upper\mhs@lower\detokenize{0123456789.:}}
+% the haddock anchor keeps these characters and writes others as '-<code>-'
+\def\mhs@encode#1{\expandafter\in@\expandafter#1\expandafter{\mhs@word}%
+  \ifin@\mhs@keep#1\else\edef\mhs@out{\mhs@out-\number`#1-}\fi}
+% \mhs@out: type (upper case), func (lower case or '_'), or op
+\def\mhs@kind#1{\expandafter\mhs@kind@\detokenize{#1}\@nil}
+\def\mhs@kind@#1#2\@nil{\def\mhs@out{op}%
+  \expandafter\in@\expandafter#1\expandafter{\mhs@upper}\ifin@\def\mhs@out{type}\fi
+  \expandafter\in@\expandafter#1\expandafter{\mhs@lower}\ifin@\def\mhs@out{func}\fi}
+\def\mhs@kind@op{op}
+\def\mhs@kind@type{type}
+\def\mhs@kind@func{func}
+\def\mhs@dashes#1.#2\@nil{#1\ifx\relax#2\relax\else-\mhs@dashes#2\@nil\fi}
+% \mhs@token: the name in \lst@token, where listings writes '_' as \lst@um_
+% and adds \lst@nolig
+\def\mhs@um#1{\edef\mhs@out{\unexpanded\expandafter{\mhs@out}%
+  \def\expandafter\noexpand\csname lst@um#1\endcsname{#1}}}
+\mhs@map\mhs@um{_'$@}\let\mhs@umdefs\mhs@out
+\def\mhs@tokenname{\begingroup\mhs@umdefs\let\lst@nolig\@empty
+  \edef\mhs@out{\the\lst@token}\edef\mhs@out{\mhs@out}%
+  \xdef\mhs@token{\detokenize\expandafter{\mhs@out}}\endgroup}
+
+% the colors are those of xlistings, e.g. \lstcolorlet{keywordB}{...}
+\colorlet{mhs@colors@prompt}{gray}
+\colorlet{mhs@colors@escape}{xlst@colors@lst@keywordC}
+\colorlet{mhslink}{gray!14}
+\colorlet{mhs@plain}{.}
+\def\mhs@style@type{\xlstGetStyle{keywordB}}
+\def\mhs@style@func{\xlstGetStyle{keywordC}}
+\def\mhs@style@op{\@declaredcolor{mhs@colors@prompt}}
+% links keep the color around them, e.g. with hyperref's colorlinks
+\def\mhs@style@plain{\color{mhs@plain}}
+\def\mhsPrompt#1{\textcolor{mhs@colors@prompt}{#1}}
+\def\mhsEscape#1{\textcolor{mhs@colors@escape}{#1}}
+\if@xlst@accuspp@available@
+\def\mhs@copyas#1#2{\BeginAccSupp{method=escape,ActualText={#1}}#2\EndAccSupp{}}
+\def\mhs@nocopy#1{\BeginAccSupp{method=hex,ActualText={}}#1\EndAccSupp{}}
+\else
+\def\mhs@copyas#1#2{#2}\def\mhs@nocopy#1{#1}
+\fi
+\AtBeginDocument{\ifdefined\href\let\mhs@href\href\else\def\mhs@href#1#2{#2}\mhs@underlinefalse\fi}
+
+\def\mhsUnderlineDepth{1.3pt}
+\def\mhsUnderlineThickness{.4pt}
+\newbox\mhs@box % listings uses \@tempboxa itself, and \aftergroup (hence the group)
+\def\mhs@underline#1{\ifmhs@underline\setbox\mhs@box\hbox{\begingroup#1\endgroup}%
+  \rlap{\color{mhslink}\rule[-\mhsUnderlineDepth]{\wd\mhs@box}{\mhsUnderlineThickness}}%
+  \box\mhs@box\else#1\fi}
+% #1 style, #2 url (empty: neither link nor highlighting), #3 text
+\def\mhs@show#1#2#3{\ifx\relax#2\relax#3\else
+  \ifmhs@links\colorlet{mhs@plain}{.}\mhs@href{#2}{\mhs@underline{\csname mhs@style@#1\endcsname#3}}\else
+  {\csname mhs@style@#1\endcsname#3}\fi\fi}
+
+% \mhs@cand@<name> lists where a name may link to: links of the document
+% (\mhs@c{style}{url}) come first, then every module of the database that
+% exports it (\mhs@h{package}{module}{name}{style}), in the order of the
+% database. The url is only computed for the one that is used.
+\def\mhs@modules{}
+\newif\ifmhs@done
+\providecommand\@gobblefour[4]{}
+% \mhs@found: {style}{url}, or {plain}{} if no candidate is active
+\def\mhs@resolve#1{\def\mhs@found{{plain}{}}\mhs@donefalse
+  \ifcsname mhs@cand@#1\endcsname\begingroup
+    \let\mhs@h\@gobblefour\let\mhs@c\mhs@c@try\csname mhs@cand@#1\endcsname
+    \let\mhs@c\@gobbletwo\let\mhs@h\mhs@h@try
+    \ifx\mhs@modules\@empty\def\mhs@want{}\csname mhs@cand@#1\endcsname
+    \else\@for\mhs@want:=\mhs@modules\do{\csname mhs@cand@#1\endcsname}\fi
+    \expandafter\endgroup\expandafter\def\expandafter\mhs@found\expandafter{\mhs@found}\fi}
+% the same for a qualified name: #1 module, else the first module it is a
+% prefix of, #2 name
+\def\mhs@resolve@in#1#2{\def\mhs@found{{plain}{}}\mhs@donefalse
+  \ifcsname mhs@cand@#2\endcsname\begingroup
+    \let\mhs@c\@gobbletwo\let\mhs@h\mhs@h@try\let\mhs@want#1\csname mhs@cand@#2\endcsname
+    \ifmhs@done\else\let\mhs@match\mhs@match@prefix\csname mhs@cand@#2\endcsname\fi
+    \expandafter\endgroup\expandafter\def\expandafter\mhs@found\expandafter{\mhs@found}\fi}
+\def\mhs@match@exact#1{\def\mhs@t{#1}\ifx\mhs@t\mhs@want\in@true\else\in@false\fi}
+\def\mhs@match@prefix#1{\edef\mhs@t{\noexpand\in@{,\detokenize\expandafter{\mhs@want}.}{,\detokenize{#1}.}}\mhs@t}
+\let\mhs@match\mhs@match@exact
+\def\mhs@c@try#1#2{\ifmhs@done\else\mhs@donetrue\def\mhs@found{{#1}{#2}}\fi}
+\def\mhs@h@try#1#2#3#4{\ifmhs@done\else
+  \ifx\mhs@want\@empty\in@true\else\mhs@match{#2}\fi
+  \ifin@\mhs@donetrue
+    \mhs@kind{#3}\let\mhs@k\mhs@out\mhs@map\mhs@encode{#3}%
+    \edef\mhs@found{{\ifx\relax#4\relax\mhs@k\else#4\fi}%
+      {\noexpand\mhs@hackage{#1}{\mhs@dashes#2.\@nil}%
+       {\ifx\relax#4\relax\ifx\mhs@k\mhs@kind@type t\else v\fi\else v\fi:\mhs@out}}}%
+  \fi\fi}
+
+% Words are looked up when listings detects keywords, i.e. as whole words and
+% never within strings or comments. Operators become literates instead.
+% #1 name as typed, #2 candidate, #3 \csappto or \cspreto
+\def\mhs@register#1#2#3{\mhs@map\mhs@keep{#1}\let\mhs@key\mhs@out
+  \ifcsname mhs@cand@\mhs@key\endcsname\else
+    \mhs@kind{#1}\ifx\mhs@out\mhs@kind@op\expandafter\mhs@addop\expandafter{\mhs@key}{#1}\fi
+  \fi
+  #3{mhs@cand@\mhs@key}{#2}}
+
+% a known word gets the style \mhs@keyword, unless it is a keyword of the
+% language (their tests run after this one)
+\lst@AddToHook{DetectKeywords}{\ifmhs@active\mhs@tokenname
+  \ifcsname mhs@cand@\mhs@token\endcsname\let\lst@thestyle\mhs@keyword\fi
+  \ifcsname mhs@user@\mhs@token\endcsname\let\lst@thestyle\mhs@keyword\fi\fi}
+\def\mhs@keyword#1{\expandafter\mhs@linkword\expandafter{\mhs@token}{#1}}
+% #1 name, #2 typeset word
+\def\mhs@linkword#1#2{\def\mhs@token{#1}%
+  \ifcsname mhs@user@#1\endcsname\mhs@userlink{#2}\else
+  \mhs@resolve{#1}\expandafter\mhs@show\mhs@found{#2}\fi}
+\def\mhs@name#1{\mhs@linkword{#1}{#1}}
+
+% '.' is part of names, so 'Data.Map.insert' and 'M.lookup' are one word:
+% the qualifier stays plain and the name links into its module, or into the
+% module an import names 'M'. A word in lower case ('f.g') is a composition.
+\newif\ifmhs@inimport
+\newif\ifmhs@alias
+\edef\mhs@dot{\detokenize{.}}
+\edef\mhs@as{\detokenize{as}}
+\edef\mhs@qualifiedkw{\detokenize{qualified}}
+% #1 the output of listings, whose box is filled with the parts instead
+\def\mhs@dotted#1{\def\lst@FillOutputBox##1\@empty{\mhs@dotted@parts}#1}
+\def\mhs@dotted@parts{\expandafter\mhs@kind\expandafter{\mhs@token}%
+  \ifx\mhs@out\mhs@kind@type\expandafter\mhs@qualified\mhs@token\@nil
+  \else\expandafter\mhs@compose\mhs@token.\@nil\fi}
+\def\mhs@qualified#1\@nil{\def\mhs@qual{}\mhs@split#1.\@nil
+  \mhs@qual.\ifcsname mhs@alias@\mhs@qual\endcsname
+    \edef\mhs@qual{\csname mhs@alias@\mhs@qual\endcsname}\fi
+  \mhs@resolve@in\mhs@qual\mhs@base\expandafter\mhs@show\mhs@found{\mhs@base}}
+% \mhs@qual: all parts but the last, \mhs@base: the last one
+\def\mhs@split#1.#2\@nil{\ifx\relax#2\relax\def\mhs@base{#1}\else
+  \edef\mhs@qual{\ifx\mhs@qual\@empty\else\mhs@qual.\fi#1}\mhs@split#2\@nil\fi}
+\def\mhs@compose#1.#2\@nil{\mhs@name{#1}\ifx\relax#2\relax\else
+  {\mhs@style@op.}\mhs@compose#2\@nil\fi}
+% the lines of imports tell the modules of aliases
+\def\mhs@import{\ifx\mhs@token\mhs@qualifiedkw\else\ifx\mhs@token\mhs@as\mhs@aliastrue\else
+  \ifmhs@alias\csxdef{mhs@alias@\mhs@token}{\mhs@importmod}\mhs@aliasfalse\else
+  \ifx\mhs@importmod\@empty\global\let\mhs@importmod\mhs@token\fi\fi\fi\fi}
+\let\mhs@importmod\@empty
+\lst@AddToHook{EOL}{\global\mhs@inimportfalse\global\let\mhs@importmod\@empty\global\mhs@aliasfalse}
+
+% listings replaces literates everywhere, so they skip strings and comments
+% (no keywords there) and operators right after a letter or prime (the '$'
+% of a character literal) themselves. A literate hides longer ones sharing
+% its prefix ('<$' would hide '<$>'), hence listings gets them shortest first.
+\def\mhs@code#1#2{\lst@ifkeywords#1\else#2\fi}
+% #1 operator as a string
+\def\mhs@op#1{\mhs@map\mhs@apart{#1}\let\mhs@t\mhs@out\mhs@code
+  {\ifxlst@lst@lastwas@character@\def\mhs@found{{plain}{}}\else\mhs@resolve{#1}\fi
+   \expandafter\mhs@show\mhs@found{\ifmhs@ligatures\ifcsname mhs@lig@#1\endcsname
+     \mhs@copyas{#1}{\csname mhs@lig@#1\endcsname}\else\mhs@t\fi\else\mhs@t\fi}}
+  {\mhs@t}}
+\def\mhs@maxlen{0}
+% #1 operator as a string, #2 as typed ('<\$>')
+\def\mhs@addop#1#2{\mhs@len{#2}\ifnum\mhs@out>\mhs@maxlen\relax\let\mhs@maxlen\mhs@out\fi
+  \ifcsname mhs@ops@\mhs@out\endcsname\else\csdef{mhs@ops@\mhs@out}{}\fi
+  \csappto{mhs@ops@\mhs@out}{{#2}{{\mhs@op{#1}}}}\cseappto{mhs@ops@\mhs@out}{{\mhs@out}}}
+\newcount\mhs@cnt
+\def\mhs@literates{\advance\mhs@cnt\@ne
+  \ifcsname mhs@ops@\the\mhs@cnt\endcsname
+    \expandafter\expandafter\expandafter\xlst@lst@addToLiterate
+    \expandafter\expandafter\expandafter{\csname mhs@ops@\the\mhs@cnt\endcsname}\fi
+  \ifnum\mhs@cnt<\mhs@maxlen\relax\expandafter\mhs@literates\fi}
+
+% In a displayed listing, a name in column 0 is defined once '=' or '::'
+% follows on its line, a type once it follows data, newtype, type, or class,
+% and a constructor once it follows the '=' or a '|' of a data or newtype.
+% Definitions go to the aux file, so from the next run on every use links to
+% the definition in the same listing, else the last one before, else the
+% first one after.
+\newcount\mhs@lstid
+\newif\ifmhs@active
+\newif\ifmhs@defs
+\newif\ifmhs@typenext
+\newif\ifmhs@indata
+\newif\ifmhs@connext
+\newif\ifmhs@defhere
+\newif\ifmhs@userrerun
+\let\mhs@pending\@empty
+\edef\mhs@reserved{\detokenize{,as,case,class,data,default,deriving,do,else,family,forall,
+  foreign,hiding,if,import,in,infix,infixl,infixr,instance,let,mdo,module,newtype,of,pattern,
+  proc,qualified,rec,then,type,where,}}
+\edef\mhs@typekeywords{\detokenize{,data,newtype,type,class,}}
+\edef\mhs@datakeywords{\detokenize{,data,newtype,}}
+\edef\mhs@eq{\detokenize{=}}
+\edef\mhs@bar{\detokenize\expandafter{\csname lst@um|\endcsname}}% listings writes '|' so
+\edef\mhs@dcolon{\detokenize{\mhs@op{::}}}
+% true, false, or local: the definitions only count within their listing
+\newif\ifmhs@private
+\def\mhs@setdefs#1{\lstKV@SetIf{#1}\ifmhs@defs}% not inline: a skipped \ifmhs@defs would count
+\def\mhs@kind@local{local}
+\lst@Key{mhsdefinitions}{true}[t]{\def\mhs@t{#1}\ifx\mhs@t\mhs@kind@local
+  \mhs@defstrue\mhs@privatetrue\else\mhs@privatefalse\mhs@setdefs{#1}\fi}
+\lst@AddToHook{Output}{\global\mhs@defherefalse\ifmhs@active\lst@ifkeywords
+  \ifmhs@inimport\mhs@import\fi
+  \expandafter\in@\expandafter.\expandafter{\mhs@token}%
+  \ifin@\ifx\mhs@token\mhs@dot\else\let\lst@thestyle\mhs@dotted\fi\fi
+  \ifmhs@defs\lst@ifdisplaystyle\mhs@detect\fi\fi\fi\mhs@markall\fi\global\mhs@linestartfalse}
+% only code counts: an '=' in a comment ('f -- = 1') confirms nothing
+\lst@AddToHook{OutputOther}{\global\mhs@linestartfalse\lst@ifkeywords\ifmhs@indata
+    \edef\mhs@t{\detokenize\expandafter{\the\lst@token}}%
+    \ifx\mhs@t\mhs@eq\global\mhs@connexttrue\fi
+    \ifx\mhs@t\mhs@bar\global\mhs@connexttrue\fi
+  \fi
+  \ifx\mhs@pending\@empty\else
+  \edef\mhs@t{\detokenize\expandafter{\the\lst@token}}%
+  \ifx\mhs@t\mhs@eq\mhs@confirm\else
+    \edef\mhs@t{\noexpand\in@{\mhs@dcolon}{\mhs@t}}\mhs@t\ifin@\mhs@confirm\fi\fi\fi\fi}
+\lst@AddToHook{EOL}{\global\let\mhs@pending\@empty}
+\def\mhs@detect{\expandafter\mhs@kind\expandafter{\mhs@token}%
+  \ifnum\lst@pos=\z@\global\mhs@localnextfalse\global\mhs@indatafalse\global\mhs@connextfalse
+    \gdef\mhs@blocks{0,}\fi
+  \ifmhs@linestart\mhs@inblock\fi
+  \ifmhs@blocknext\global\mhs@blocknextfalse\mhs@pushblock\fi
+  \ifmhs@connext\global\mhs@connextfalse
+    \ifx\mhs@out\mhs@kind@type\global\mhs@defheretrue\mhs@define{con}\fi
+  \else\ifmhs@localnext\global\mhs@localnextfalse
+    \ifx\mhs@out\mhs@kind@func\mhs@known\mhs@define{local}\fi
+  \else\ifx\mhs@token\mhs@where\global\mhs@localnexttrue\global\mhs@blocknexttrue\else
+  \ifx\mhs@token\mhs@let\global\mhs@localnexttrue\global\mhs@blocknexttrue\else
+  \ifmhs@typenext\global\mhs@typenextfalse
+    \ifx\mhs@out\mhs@kind@type\global\mhs@defheretrue\mhs@define{type}\fi
+  \else\ifnum\lst@pos=\z@
+    \edef\mhs@t{\noexpand\in@{,\mhs@token,}{\mhs@reserved}}\mhs@t
+    \ifin@
+      \edef\mhs@t{\noexpand\in@{,\mhs@token,}{\mhs@typekeywords}}\mhs@t
+      \ifin@\global\mhs@typenexttrue\fi
+      \edef\mhs@t{\noexpand\in@{,\mhs@token,}{\mhs@datakeywords}}\mhs@t
+      \ifin@\global\mhs@indatatrue\fi
+    \else\ifx\mhs@out\mhs@kind@func\mhs@known\global\let\mhs@pending\mhs@token\fi\fi
+  \fi\fi\fi\fi\fi\fi}
+% The bindings of a where or let block start in the column of its first one
+% (the layout rule), so a line that starts there binds another local name.
+% \mhs@blocks lists the columns of the open blocks, innermost first
+\def\mhs@blocks{0,}
+\def\mhs@pushblock{\expandafter\mhs@top\mhs@blocks\@nil
+  \ifnum-\lst@pos>\mhs@t\relax\xdef\mhs@blocks{\number-\lst@pos,\mhs@blocks}\fi}
+\def\mhs@top#1,#2\@nil{\def\mhs@t{#1}\def\mhs@rest{#2}}
+% a line starting left of a block closes it, one in its column binds a name
+\def\mhs@inblock{\expandafter\mhs@top\mhs@blocks\@nil
+  \ifnum-\lst@pos<\mhs@t\relax\global\let\mhs@blocks\mhs@rest\expandafter\mhs@inblock\else
+    \ifnum-\lst@pos=\mhs@t\relax\ifnum\mhs@t>\z@\global\mhs@localnexttrue\fi\fi\fi}
+\newif\ifmhs@linestart
+% the first token after where or let, also '(' of '(a, b) = ...', opens a block
+\newif\ifmhs@blocknext
+\edef\mhs@space{\detokenize{\lst@outputspace}}
+\lst@AddToHook{OutputOther}{\ifmhs@blocknext\lst@ifkeywords
+  \edef\mhs@t{\noexpand\in@{\mhs@space}{\detokenize\expandafter{\the\lst@token}}}\mhs@t
+  \ifin@\else\global\mhs@blocknextfalse\mhs@pushblock\fi\fi\fi}
+\lst@AddToHook{EOL}{\global\mhs@linestarttrue}
+% a target if the last run defined the name here
+\def\mhs@known{\ifcsname mhs@known@\mhs@token @\the\mhs@lstid\endcsname\global\mhs@defheretrue\fi}
+\newif\ifmhs@localnext
+\edef\mhs@where{\detokenize{where}}
+\edef\mhs@let{\detokenize{let}}
+\let\mhs@style@local\mhs@style@func
+\let\mhs@style@con\mhs@style@plain% constructors are only underlined
+\def\mhs@confirm{{\let\mhs@token\mhs@pending\mhs@define{func}}\global\let\mhs@pending\@empty}
+% #1 kind of \mhs@token; a name with several equations is defined once. The
+% write is not immediate: code in a box that is never shipped out (beamer's
+% \only on another overlay) defines nothing
+\def\mhs@define#1{\ifcsname mhs@seen@\mhs@token @\the\mhs@lstid\endcsname\else
+  \csgdef{mhs@seen@\mhs@token @\the\mhs@lstid}{}%
+  \if@filesw\edef\mhs@t{\mhs@write\@auxout{\string\mhs@definition{\mhs@token}{\the\mhs@lstid}{#1}{\mhs@group}}}%
+    \mhs@t\fi\fi}
+\let\mhs@write\write
+% beamer typesets a frame once per overlay, each time as a listing of its own;
+% the overlays of a frame form a group; the group -1 marks a listing whose
+% definitions only count within it
+\def\mhs@group{\ifmhs@private-1\else\ifdefined\beamer@slideinframe\the\c@framenumber
+  \else\the\mhs@lstid\fi\fi}
+% from the aux file: #1 name, #2 listing, #3 kind, #4 group
+\def\mhs@definition#1#2#3#4{\edef\mhs@t{\detokenize{#1}}%
+  \csxappto{mhs@user@\mhs@t}{{#2}{#3}{#4}}\csgdef{mhs@known@\mhs@t @#2}{}}
+% so that the aux file still works without the package
+\AtBeginDocument{\if@filesw\immediate\write\@auxout{\string\providecommand\string\mhs@definition[4]{}}\fi}
+% a definition the last run did not know asks for a rerun, found when LaTeX
+% reads the aux file again at the end
+\AtEndDocument{\def\mhs@definition#1#2#3#4{%
+  \ifcsname mhs@known@\detokenize{#1}@#2\endcsname\else\global\mhs@userreruntrue\fi}}
+\AddToHook{enddocument/info}{\ifmhs@userrerun\PackageWarningNoLine{magic-haskell}{The definitions
+  of the document changed. Rerun to get cross-references right}\fi}
+% #1 typeset word, the name is \mhs@token
+\def\mhs@userlink#1{\let\mhs@exact\relax\let\mhs@below\relax\let\mhs@first\relax
+  \expandafter\expandafter\expandafter\mhs@scan\csname mhs@user@\mhs@token\endcsname\@nil\@nil\@nil
+  \ifx\mhs@exact\relax\ifx\mhs@below\relax\let\mhs@exact\mhs@first\else\let\mhs@exact\mhs@below\fi\fi
+  \ifx\mhs@exact\relax\let\mhs@t\mhs@libraryword\else\edef\mhs@t{\noexpand\mhs@userlink@\mhs@exact}\fi
+  \mhs@t{#1}}
+% a name defined only locally elsewhere: as if the document did not define it
+\def\mhs@libraryword#1{\expandafter\mhs@resolve\expandafter{\mhs@token}\expandafter\mhs@show\mhs@found{#1}}
+% #1 listing, #2 kind, #3 group; local definitions ('where go ...') and those
+% of a listing with mhsdefinitions=local only count in their listing, the first definition is the last one of its group
+% (the last overlay of a beamer frame, where all of it is visible)
+\def\mhs@scan#1#2#3{\ifx\@nil#1\else
+  \ifnum#1=\mhs@lstid\def\mhs@exact{{#1}{#2}}\fi
+  \def\mhs@t{#2}\ifx\mhs@t\mhs@kind@local\else\ifnum#3<\z@\else
+    \ifx\mhs@first\relax\def\mhs@first{{#1}{#2}}\def\mhs@firstgroup{#3}\else
+      \ifnum#3=\mhs@firstgroup\relax\def\mhs@first{{#1}{#2}}\fi\fi
+    \ifnum#1<\mhs@lstid\def\mhs@below{{#1}{#2}}\fi
+  \fi\fi
+  \expandafter\mhs@scan\fi}
+% a target one line above the baseline: viewers put it at the top of the
+% window, so the whole line of the definition stays visible
+\def\mhs@target#1{\smash{\raise\dimexpr\ht\strutbox+\dp\strutbox\relax\hbox{\hypertarget{#1}{}}}}
+% #1 listing, #2 kind, #3 typeset word; the first binding is the target
+\def\mhs@userlink@#1#2#3{\in@false
+  \ifmhs@defhere\ifnum#1=\mhs@lstid\ifcsname mhs@placed@#1@\mhs@token\endcsname\else\in@true\fi\fi\fi
+  \ifdefined\hyperlink\else\mhs@linksfalse\fi
+  \ifin@\csgdef{mhs@placed@#1@\mhs@token}{}%
+    \ifdefined\hypertarget\mhs@target{mhs.#1.\mhs@token}\fi{\csname mhs@style@#2\endcsname#3}%
+  \else\ifmhs@links\colorlet{mhs@plain}{.}\hyperlink{mhs.#1.\mhs@token}{\mhs@underline{\csname mhs@style@#2\endcsname#3}}%
+  \else{\csname mhs@style@#2\endcsname#3}\fi\fi}
+
+% |warn|, |err|, and |info| put a soft band behind every token they span,
+% even over several lines, and keep the colors and links of the tokens
+\definecolor{mhswarning}{HTML}{DF8E1D}
+\definecolor{mhserror}{HTML}{D20F39}
+\definecolor{mhsinfo}{HTML}{1E66F5}
+\let\mhs@marking\@empty
+\def\mhs@startmark#1{\def\mhs@marking{#1}}
+\def\mhs@markall{\ifx\mhs@marking\@empty\else
+  \let\mhs@markedstyle\lst@thestyle\let\lst@thestyle\mhs@mark\fi}
+\def\mhs@mark#1{\setbox\mhs@markbox\hbox{\begingroup\mhs@underlinefalse\mhs@markedstyle{#1}\endgroup}%
+  \rlap{\color{\mhs@marking!12}\rule[-\dp\strutbox]{\wd\mhs@markbox}{\dimexpr\ht\strutbox+\dp\strutbox}}%
+  \rlap{\color{\mhs@marking!70}\rule[-\dp\strutbox]{\wd\mhs@markbox}{.6pt}}%
+  \box\mhs@markbox}
+\newbox\mhs@markbox
+\lst@AddToHook{OutputOther}{\mhs@markall}
+% module paths are not linked ('Control' would be a constructor of Data.Char)
+\def\mhs@unlinked#1{\def\mhs@show##1##2##3{##3}{\xlstGetStyle{keywordA}#1}\ \global\mhs@inimporttrue}
+
+\lst@Key{magic}\relax[t]{\global\advance\mhs@lstid\@ne\global\mhs@typenextfalse
+  \global\mhs@localnextfalse\global\mhs@indatafalse\global\mhs@connextfalse
+  \global\mhs@linestarttrue\global\mhs@blocknextfalse\gdef\mhs@blocks{0,}\mhs@activetrue\mhs@cnt\z@\mhs@literates}
+% spaces as wide as the characters of the font, so indentation aligns
+% ('where go' and the 'go' of the next line), whatever the font
+\lst@AddToHook{InitVars}{\ifmhs@active\lst@width\fontcharwd\font`x\relax\fi}
+% xlistings makes every digit a literate that starts a number; within a word
+% ('foldl1', 'x2') a digit continues the word instead
+\def\mhs@worddigit#1{\expandafter\mhs@worddigit@\csname mhs@digit@#1\endcsname#1}
+\def\mhs@worddigit@#1#2{\lst@DefSaveDef{`#2}#1{\let\mhs@next\@secondoftwo
+  \lst@ifletter\ifxlst@lst@lastwas@character@\let\mhs@next\@firstoftwo\fi\fi
+  \mhs@next{\lst@ProcessDigit#2}#1}}
+\lst@AddToHook{SelectCharTable}{\ifmhs@active\mhs@worddigit0\mhs@worddigit1\mhs@worddigit2%
+  \mhs@worddigit3\mhs@worddigit4\mhs@worddigit5\mhs@worddigit6\mhs@worddigit7\mhs@worddigit8%
+  \mhs@worddigit9\fi}
+\lst@Key{modules}\relax{\edef\mhs@modules{\zap@space#1 \@empty}}
+
+\newcommand*\mhsModules[1]{\edef\mhs@modules{\zap@space#1 \@empty}}
+% #1 style (type, func, op, or plain), #2 url, #3 name
+\newcommand*\mhsAddLink[3][plain]{\mhs@register{#3}{\mhs@c{#1}{#2}}\cspreto}
+\newcommand*\mhsNoLink[1]{\def\mhs@list{#1}% \@for expands the first token of a literal list
+  \@for\mhs@t:=\mhs@list\do{\expandafter\mhsAddLink\expandafter{\expandafter}\expandafter{\mhs@t}}}
+\newcommand*\mhsLigature[2]{\mhs@map\mhs@keep{#1}\csdef{mhs@lig@\mhs@out}{#2}%
+  \ifcsname mhs@cand@\mhs@out\endcsname\else\mhs@register{#1}{}\csappto\fi}
+\def\mhsLinksOn{\mhs@linkstrue}          \def\mhsLinksOff{\mhs@linksfalse}
+\def\mhsLigaturesOn{\mhs@ligaturestrue}  \def\mhsLigaturesOff{\mhs@ligaturesfalse}
+\def\mhsTightOn{\mhs@tighttrue}          \def\mhsTightOff{\mhs@tightfalse}
+\def\mhsUnderlineOn{\mhs@underlinetrue}  \def\mhsUnderlineOff{\mhs@underlinefalse}
+
+\newcommand*\mhsSetVersion[2]{\ifx\relax#2\relax\csundef{mhs@version@#1}\else\csdef{mhs@version@#1}{#2}\fi}
+\def\mhsHackage{https://hackage.haskell.org/package}
+\def\mhs@hackage#1#2#3{\mhsHackage/#1\ifcsname mhs@version@#1\endcsname
+  -\csname mhs@version@#1\endcsname\fi/docs/#2.html\##3}
+% #1 package, #2 module, #3 names; constructors are values that look like types
+\newcommand*\mhsLinks[3][base]{\mhs@links{#1}{#2}{#3}{}}
+\newcommand*\mhsConstructors[3][base]{\mhs@links{#1}{#2}{#3}{type}}
+\def\mhs@links#1#2#3#4{%
+  \def\mhs@list{#3}\@for\mhs@t:=\mhs@list\do{\ifx\mhs@t\@empty\else
+    \expandafter\mhs@link\expandafter{\mhs@t}{#1}{#2}{#4}\fi}}
+% #1 name, #2 package, #3 module, #4 style (empty: by kind)
+\def\mhs@link#1#2#3#4{\mhs@map\mhs@keep{#1}%
+  \edef\mhs@t{\noexpand\mhs@h{#2}{\zap@space#3 \@empty}{\mhs@out}{#4}}%
+  \expandafter\mhs@register@db\expandafter{\mhs@t}{#1}}
+\def\mhs@register@db#1#2{\mhs@register{#2}{#1}\csappto}
+\def\mhs@all{all}
+% #1 package, #2 version, #3 its \mhsLinks, read if the option packages selects it
+\newcommand\mhsPackage[3]{%
+  \edef\mhs@t{\noexpand\in@{,#1,}{,\mhs@packages,}}\mhs@t
+  \ifx\mhs@packages\mhs@all\in@true\fi\ifin@\mhsSetVersion{#1}{#2}#3\fi}
+
+% a tight ligature moves its characters closer together, like the ligatures
+% of programming fonts, but keeps their width, so columns align; '=' keeps
+% its distance, '>>=' would look like one wide arrow
+\def\mhsLigatureKern{.12em}
+\newcommand*\mhsTightLigature[1]{\mhs@map\mhs@tighten{#1}\let\mhs@disp\mhs@out
+  \mhs@map\mhs@apart{#1}\let\mhs@plain\mhs@out\mhs@len{#1}%
+  \edef\mhs@disp{\noexpand\mhsLigature{\unexpanded{#1}}{\noexpand\ifmhs@tight
+    \noexpand\makebox[\mhs@out\noexpand\fontcharwd\noexpand\font`x]{\unexpanded\expandafter{\mhs@disp}}%
+    \noexpand\else\unexpanded\expandafter{\mhs@plain}\noexpand\fi}}\mhs@disp}
+\def\mhs@last{}
+\def\mhs@tighten#1{\edef\mhs@out{\mhs@out\ifx\mhs@out\@empty\else
+  \if=#1\else\if=\mhs@last\else\noexpand\kern-\noexpand\mhsLigatureKern\fi\fi\fi#1}\def\mhs@last{#1}}
+\mhsLigature{->}{->}          \mhsLigature{<-}{<-}
+\mhsLigature{=>}{=>}          \mhsLigature{::}{::}
+\mhsLigature{==}{=\kern.1pt=} \mhsLigature{>>}{>\kern-.1pt>}
+\def\mhsTightLigatures{<\$>,<\$,\$>,<*>,<*,*>,<\&>,<|>,>>=,=<<,>=>,<=<,<>,++,!!,\&\&,||,/=,<=,>=,==>,\$!}
+\@for\mhs@t:=\mhsTightLigatures\do{\expandafter\mhsTightLigature\expandafter{\mhs@t}}
+
+% xlistings delimits inline code by backticks, Haskell uses them ('x `div` 2')
+\renewcommand*\xlst@dlst@default[2][]{%
+  \begingroup\fboxsep=\z@\fcolorbox{xlst@colors@border}{xlst@colors@background}{%
+  \if@xlst@inlinesize\@lst@within@inline@true\fi\thinspace\strut
+  \lstinline[prebreak=\xlst@lst@inline@prebreak,#1,keepspaces=true,breakatwhitespace]{#2}\thinspace}\endgroup}
+\renewcommand*\xlst@dlst@blank[2][]{%
+  \begingroup\thinspace\if@xlst@inlinesize\@lst@within@inline@true\fi
+  \lstinline[prebreak=\xlst@lst@inline@prebreak,#1,keepspaces=true,breakatwhitespace]{#2}\endgroup}
+
+\lstdefinelanguage{lMagicHaskell}{
+  keywords={as,case,class,data,default,deriving,do,else,family,forall,foreign,
+    hiding,if,in,infix,infixl,infixr,instance,let,mdo,newtype,of,
+    pattern,proc,qualified,rec,then,type,where},
+  sensitive=true,
+  alsoletter={'.},
+  morecomment=[l]{--},
+  morecomment=[n]{\{-}{-\}},
+  morestring=[b]",
+  moredelim=**[is][{\mhs@startmark{mhswarning}}]{|warn|}{|warn|},
+  moredelim=**[is][{\mhs@startmark{mhserror}}]{|err|}{|err|},
+  moredelim=**[is][{\mhs@startmark{mhsinfo}}]{|info|}{|info|},
+  moredelim=[is][{}]{|plain|}{|plain|},
+  moredelim=**[is][\xlstGetStyle{numbers}]{|num|}{|num|},
+  moredelim=[is][{\color{lightgray}}]{|dim|}{|dim|},
+  moredelim=**[il][\mhs@unlinked{import}]{import\ },
+  moredelim=**[il][\mhs@unlinked{module}]{module\ },
+  escapeinside={!*}{*!},
+  add to literate={:...:}{{{\textcolor{gray}{\ldots}}}}1
+    {@}{{\mhs@code{\mhsEscape{@}}{@}}}1
+    {\\}{{\mhs@code{\mhsEscape{\textbackslash}}{\textbackslash}}}1
+    {LANGUAGE}{{{\textit{\sffamily\xlstGetStyle{numbers}LANGUAGE}}}}8,
+  magic
+}
+\lstdefinelanguage{lGHCi}{
+  language=lMagicHaskell,
+  morekeywords=[5]{:set,:load,:info,:kind,:reload,:type,:browse,:t,:i,:k,:l,:r,:q},
+  alsoletter={:},
+  mhsdefinitions=false,
+  moredelim=[il][{}]{out>},
+  add to literate={ghci>}{{{\mhs@nocopy{\mhsPrompt{ghci>}}}}}5
+    {ghci|}{{{\mhs@nocopy{\mhsPrompt{ghci|}}}}}5
+}
+\edef\mhs@t{\noexpand\RegisterLanguage[magic-haskell]{\mhsLanguage}{lMagicHaskell}}\mhs@t
+\RegisterLanguage{ghci}{lGHCi}
+
+\InputIfFileExists{\mhs@database.cfg}{}{\PackageWarning{magic-haskell}{No link database '\mhs@database.cfg'}}
+\ifmhs@ghc\RequirePackage{magic-haskell-ghc}\fi
+\endinput

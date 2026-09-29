@@ -1,0 +1,105 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST 1: whole words
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:putStrLn
+============================================================
+============================================================
+TEST 2: next to punctuation
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:filter
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:id
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:id
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:show
+============================================================
+============================================================
+TEST 3: backticks
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:elem
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:div
+============================================================
+============================================================
+TEST 4: underscore and prime
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:mapM_
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:foldl-39-
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:sequence_
+============================================================
+============================================================
+TEST 5: digits
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:foldl1
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:zip3
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:liftA2
+============================================================
+============================================================
+TEST 6: strings
+============================================================
+============================================================
+============================================================
+TEST 7: comments
+============================================================
+============================================================
+============================================================
+TEST: block comment
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:show
+============================================================
+TEST: import lines
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:filter
+============================================================
+TEST 8: qualified
+============================================================
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:insert
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Data-Char.html\#v:toUpper
+============================================================
+============================================================
+TEST 9: composition
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:show
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+============================================================
+============================================================
+TEST 10: char literals
+============================================================
+============================================================
+============================================================
+TEST: aliases
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:lookup
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:-43--43-
+COPY: ++
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#v:insert
+============================================================
+TEST 11: types and constructors
+============================================================
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Maybe
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:Just
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:Nothing
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:Either
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:Left
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#t:IO
+============================================================
+============================================================
+TEST 12: other packages
+============================================================
+LINK: https://hackage.haskell.org/package/containers-0.8/docs/Data-Map-Strict.html\#t:Map
+LINK: https://hackage.haskell.org/package/transformers-0.6.3.0/docs/Control-Monad-Trans-Reader.html\#v:ask
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Control-Monad.html\#v:when
+============================================================
+============================================================
+TEST 13: no link
+============================================================
+============================================================
+============================================================
+TEST 14: custom link
+============================================================
+LINK: https://example.org/T
+LINK: https://hackage.haskell.org/package/base-4.22.0.0/docs/Prelude.html\#v:map
+============================================================
+============================================================
+TEST 15: custom link wins
+============================================================
+LINK: https://example.org/f
+============================================================

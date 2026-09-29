@@ -1,0 +1,506 @@
+\documentclass[10pt,DIV=12]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext,newpxmath}
+\usepackage[varqu,varl,scale=.95]{inconsolata}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{csquotes}
+\usepackage{booktabs}
+\usepackage[margin=2cm]{geometry}
+\usepackage[group-separator={\,},group-minimum-digits=4]{siunitx}
+\usepackage{microtype}
+\usepackage{imakeidx}
+\makeindex[title={Index of Commands, Options, and Keys},name=\jobname,columns=2,columnsep=.75cm,noautomatic=true,intoc]
+\indexsetup{noclearpage}
+
+\usepackage[ghc,language=hs,xlistings={style={plain number}}]{magic-haskell}
+\LoadLanguages{latex,bash}
+% a calm palette (after Catppuccin Latte) through the colors of xlistings
+\definecolor{plum}{HTML}{9B1B6E}         \definecolor{latte-blue}{HTML}{1E66F5}
+\definecolor{latte-green}{HTML}{40A02B}  \definecolor{latte-text}{HTML}{4C4F69}
+\definecolor{latte-subtle}{HTML}{9CA0B0}
+\lstcolorlet{keywordA}{plum}             % keywords
+\lstcolorlet{keywordB}{latte-blue}       % types and constructors
+\lstcolorlet{keywordC}{latte-text}       % functions, marked by their links
+\lstcolorlet{numbers}{latte-blue}
+\lstcolorlet{literals}{latte-green}
+\lstcolorlet{comments}{latte-subtle}
+\lstcolorlet{command}{plum}              % LaTeX macros
+% the LaTeX examples: the macros of magic-haskell are commands, escapes and
+% markers stay verbatim, and '*' is no letter, so that '!*\enquote' finds \enquote
+\xlstlangoverride{latex}{morekeywords=[5]{\\AnimateCode,\\endAnimateCode,\\bhs,\\enquote,\\mhsAddLink,\\mhsEval,\\mhsGhcCommand,
+    \\mhsLigature,\\mhsLinksOff,\\mhsModules,\\mhsGhcEvalInto,\\mhsGhcMemory,\\mhsGhcMemoryText,\\mhsGhcTime,\\mhsGhcTimeText,\\mhsGhcTypeInto,\\mhsType,\\mhsTypeOf,\\mhsUnderlineOff,
+    hs,ghcisession,magic-haskell,magic-haskell-ghc},
+  alsoletter={\\\#@},escapeinside={}{},deletedelim=[is]{|plain|}{|plain|},numbers=none}
+
+\usepackage[colorlinks,allcolors=cyan!65!black]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\let\T\texttt
+% the default name of the language (this document uses language=hs)
+\newcommand\deflang{mhs}
+% macros, options, keys, and environments, each with an entry in the index
+% in the index, the names are colored as in the text and their kind is gray
+\NewDocumentCommand\idxkind{m}{\textcolor{gray}{\small(#1)}}% robust: \small would write @ into the index
+\newcommand\cmd[1]{\T{\color{plum}\textbackslash#1}\index{#1@\texttt{\color{plum}\textbackslash #1}\string|hyperpage}}
+\newcommand\key[1]{\T{#1}\index{#1@\texttt{#1} \idxkind{key}\string|hyperpage}}
+\newcommand\env[1]{\T{#1}\index{#1@\texttt{#1} \idxkind{environment}\string|hyperpage}}
+% a package, linked to its home
+\newcommand\pkg[1]{\href{\ifcsname pkgurl@#1\endcsname\csname pkgurl@#1\endcsname\else https://ctan.org/pkg/#1\fi}{\T{#1}}}
+\expandafter\def\csname pkgurl@xlistings\endcsname{https://github.com/EagleoutIce/xlistings}
+\expandafter\def\csname pkgurl@lc-visualizer\endcsname{https://github.com/EagleoutIce/latex-lambda-calculus-visualizer}
+\expandafter\def\csname pkgurl@code-animation\endcsname{https://github.com/EagleoutIce/code-animation}
+% inline LaTeX, with the macros of the package highlighted
+\newcommand\code{\lstinline[language=lLatex,language addons=latex,basicstyle=\ttfamily,columns=flexible,keepspaces]}
+% an option: its name and its default
+\newcommand\option[2]{\T{\bfseries\color{plum}#1}%
+  \index{#1@\texttt{\bfseries\color{plum}#1} \idxkind{package option}\string|hyperpage}\,%
+  \textcolor{gray}{\small(\ifx\relax#2\relax no default\else default \T{#2}\fi)}}
+\setkomafont{disposition}{\rmfamily\bfseries}
+\setkomafont{subtitle}{\rmfamily\itshape}
+\setkomafont{descriptionlabel}{\normalfont}
+\setlist{nosep,itemsep=2pt,leftmargin=*}
+% the entries of descriptions (options, commands): a bullet in the margin, a
+% hanging indent, and some space between them
+\newcommand\descbullet[1]{\llap{\textbullet\enspace}#1}
+\setlist[description]{format=\descbullet,labelindent=0pt,leftmargin=1.5em,itemsep=\medskipamount}
+\setlength\emergencystretch{3em}
+\RedeclareSectionCommand[tocbeforeskip=2pt]{section}
+% the statistics of the database, counted by reading it once more:
+% \dbcount{names|modules}{package or *}, and the rows of its table
+\makeatletter
+\newcommand\dbcount[2]{\ifcsname db@#1@#2\endcsname\csname db@#1@#2\endcsname\else0\fi}
+\def\db@add#1#2{\edef\db@n{\the\numexpr\dbcount{#1}{#2}+1}\csxdef{db@#1@#2}{\db@n}}
+\def\db@packages{}
+\begingroup
+\def\mhsPackage#1#2#3{\ifcsname db@version@#1\endcsname\else
+    \csgdef{db@version@#1}{#2}\gappto\db@packages{\db@row{#1}}\fi#3}
+\renewcommand\mhsLinks[3][base]{\ifcsname db@seen@#1@#2\endcsname\else
+    \csgdef{db@seen@#1@#2}{}\db@add{modules}{#1}\db@add{modules}{*}\fi
+  \def\db@list{#3}\@for\db@t:=\db@list\do{\ifx\db@t\@empty\else\db@add{names}{#1}\db@add{names}{*}\fi}}
+\let\mhsConstructors\mhsLinks
+\input{magic-haskell-links.cfg}
+\endgroup
+% the version is aligned at its first dot
+\def\versioncells#1.#2\relax{\noexpand\T{#1} & \noexpand\T{#2}}
+\def\databaserows{}
+\def\db@row#1{\edef\db@v{\csname db@version@#1\endcsname}\xappto\databaserows{%
+  \noexpand\href{https://hackage.haskell.org/package/#1-\db@v}{\noexpand\T{#1}}
+  & \expandafter\versioncells\db@v\relax & \dbcount{modules}{#1} & \dbcount{names}{#1} \noexpand\tabularnewline}}
+\db@packages
+\makeatother
+
+\title{\T{magic-haskell}}
+\subtitle{Haskell listings that link to Hackage and talk to GHC}
+\author{\href{mailto:florian.sihler@web.de}{Florian Sihler}\thanks{Released under the \href{https://www.latex-project.org/lppl.txt}{LaTeX Project Public License}, version 1.3c or later.}}
+\date{Version v1.0 \textendash{} 2026/09/29\\[.5ex]
+  \normalsize\href{https://github.com/EagleoutIce/magic-haskell}{\T{github.com/EagleoutIce/magic-haskell}}}
+
+\begin{document}
+\maketitle
+\setcounter{tocdepth}{1}
+\tableofcontents
+
+\section{Introduction}
+\T{magic-haskell} extends the \pkg{xlistings} package with a Haskell language that automatically links \enquote{magic} names to their documentation on \href{https://hackage.haskell.org}{Hackage} or to their definition in the document. It can also ask GHC for types, values, and whole sessions. Originally, I developed \T{magic-haskell} privately for the functional programming lecture at Ulm University.
+
+\begin{minted}{hs}
+data Shape = Circle Double | Square Double
+type AnotherCirc = Circle
+
+area :: Shape -> Double
+area (Circle r) = pi * r * r
+area (Square a) = a * a
+
+main :: IO ()
+main = mapM_ (print . area) [Circle 1, AnotherCirc 2] -- no links in <$> comments
+\end{minted}
+
+Every linked name is underlined in \textcolor{gray}{gray}. \bhs{Double} and \bhs{mapM_} lead to
+their documentation, \bhs{Shape}, \bhs{Circle}, and \bhs{area} to their definitions above. Names are
+matched as whole words, and never within strings or comments (however, the highlighting is not fully context sensitive).
+
+\subsection{Features at a Glance}
+There are many features that \T{magic-haskell} adds on top of \pkg{xlistings} and it interacts flawlessly with its styles, line numbers, environments, inline commands, and \T{minted} emulation layer, as well as with the optional \pkg{code-animation} package (\cref{sec:animations}). All of the following happens automatically for Haskell code:
+\begin{itemize}[itemsep=\smallskipamount]
+  \item \textbf{Links to Hackage.} Known names and operators link to their documentation, e.g.\
+    \bhs{mapM_ print xs}. By default, this version of \T{magic-haskell} ships with \num{\dbcount{names}{*}} links for \num{\dbcount{modules}{*}} modules that were extracted, verified, and cached automatically from a set of desired packages. They are stored in its link database and can be extended easily (\cref{sec:database,sec:extending}).
+  \item \textbf{Links and syntax highlighting for user definitions.} Functions, types, and constructors are recognized where they are
+    defined, and every use links there, anywhere in the document and across beamer overlays:
+    \bhs{area (Circle 2)} leads back to the listing above.
+    Local \bhs{where} and \bhs{let} bindings stay defined only within their listing (\cref{sec:definitions}).
+  \item \textbf{Adaptive Redefinitions.} after a second \bhs{data Foo}, later uses link to it,
+    while earlier ones keep linking to the first. On beamer slides, links lead to an overlay that shows the definition in full (\cref{sec:definitions}).
+  \item \textbf{Qualified names.} \bhs{Data.Map.insert} links sensitive to the import. This also works with aliases, e.g., \bhs{M.insert} (not active here) if an import of the listing names the alias \bhs{M} (\cref{sec:qualified}).
+  \item \textbf{Ligatures copy as text.} \bhs{f <\$> xs >>= g} can be typeset with ligatures, but
+    copies as \T{f <\$> xs >{}>= g} if accessibility support is enabled and supported by the PDF viewer (\cref{sec:ligatures}).
+  \item \textbf{Markers.} Support for multi-line highlight segments with \bhs{|warn|head xs|warn|}, \bhs{|err|undefined|err|}, and more (\cref{sec:markers}).
+  \item \textbf{Answers from GHC.} We can request GHC to compute types and values during document compilation, e.g.\
+    \code|\mhsType{map}| returns \mhsType{map} (\cref{sec:ghc}).
+  \item \textbf{GHCi sessions.} The environment \env{ghcisession} runs its lines in GHCi and typesets
+    the answers. On beamer slides, they appear one overlay per step, or all at once with
+    \T{animate=false} (\cref{sec:sessions}).
+\end{itemize}
+
+\subsection{Loading the Package}
+The \T{magic-haskell} package consists of three files. The main package in \T{magic-haskell.sty}, the GHC adapter in \T{magic-haskell-ghc.sty}, and the link database in \T{magic-haskell-links.cfg}. 
+We require \pkg{xlistings} to work (hooking into its existing processor layer), which the \href{https://github.com/EagleoutIce/magic-haskell}{repository} embeds as a git submodule (clone with \T{-{}-recurse-submodules}). Links require \pkg{hyperref}, copyable ligatures \pkg{accsupp}.
+
+\begin{minted}{latex}
+\usepackage{magic-haskell}             % optionally with [ghc] for the GHC integration
+\usepackage{hyperref}
+\end{minted}
+
+The package registers two languages, each with the environments and commands of \pkg{xlistings}:
+\begin{itemize}
+  \item \T{\deflang} (configurable via the option \T{language}, alias \T{magic-haskell}) with the environments
+    \env{\deflang}, \env{\deflang*} (no line numbers), \env{plain\deflang} (no styling and no line numbers), and the inline commands
+    \cmd{b\deflang}, \cmd{c\deflang}, and \cmd{i\deflang} (input a file),
+    e.g.\ \bhs{foldr (+) 0 <\$> Just [1, 2, 3]}. This document uses \code|language=hs|, hence \code|\bhs|.
+  \item \T{ghci}, a session where the prompt \T{ghci>} is not copyable and \T{out>} marks output to have no highlighting:
+\begin{minted}[numbers=none]{ghci}
+ghci> :t fmap
+out>fmap :: Functor f => (a -> b) -> f a -> f b
+\end{minted}
+      Please note that this language just defines the markup, see \cref{sec:sessions} for the environment \env{ghcisession} that runs its lines automatically with GHCi.
+\end{itemize}
+
+With the \T{fakeminted} option of \pkg{xlistings} (on by default), this also works with the \textit{minted} environment.
+
+\subsection{Package Options}
+
+\begin{description}
+  \item[\option{links}{true}] links known names. \cmd{mhsLinksOn} and \cmd{mhsLinksOff}
+    switch it within the document:
+\begin{minted}{latex}
+\bhs{map show xs}                     % with links
+{\mhsLinksOff \bhs{map show xs}}      % without
+\end{minted}
+    give \bhs{map show xs} and {\mhsLinksOff\bhs{map show xs}}.
+  \item[\option{underline}{true}] underlines linked names in the color \T{mhslink}. \cmd{mhsUnderlineOn} and \cmd{mhsUnderlineOff} toggle this behavior:
+\begin{minted}{latex}
+{\mhsUnderlineOff \bhs{map show xs}}
+{\colorlet{mhslink}{cyan!40}\bhs{map show xs}}
+\end{minted}
+    give {\mhsUnderlineOff\bhs{map show xs}} and {\colorlet{mhslink}{cyan!40}\bhs{map show xs}}.
+  \item[\option{ligatures}{true}] typesets operators as ligatures (\cref{sec:ligatures}).
+    After \cmd{mhsLigaturesOff}, \bhs{f <\$> xs} will be rendered as {\mhsLigaturesOff\bhs{f <\$> xs}};
+    \cmd{mhsLigaturesOn} switches ligatures on again.
+  \item[\option{tight}{true}] moves the characters of operators closer together.
+    \cmd{mhsTightOn} and \cmd{mhsTightOff} switch it, so \bhs{f <\$> xs >>= g} becomes
+    {\mhsTightOff\bhs{f <\$> xs >>= g}}.
+  \item[\option{packages}{all}] selects the packages of the database to link (this is useful if many packages export the same names and you want to specify which of those are to be considered loaded):
+\begin{minted}{latex}
+\usepackage[packages={base,mtl}]{magic-haskell}
+\end{minted}
+  \item[\option{database}{magic-haskell-links}] names the link database, a \T{.cfg} file, e.g.\
+    one generated from a package list of your own (\cref{sec:extending}):
+\begin{minted}{latex}
+\usepackage[database=my-links]{magic-haskell}   % reads my-links.cfg
+\end{minted}
+  \item[\option{language}{mhs}] names the language, its environments, and its commands. This
+    document uses \code|language=hs|, so its code is written as \code|\begin{hs}| and
+    \code|\bhs{...}|. As a small support for editors with latex-sensitive syntax highlighting, we support \code|\\$| in the argument of \code|\bhs|, e.g.\ \code|\bhs{f <\\$> xs}| (\bhs{f <\$> xs}),
+    so that editors do not take it for a \TeX-math environment.
+  \item[\option{ghc}{false}] loads the GHC integration presented in \cref{sec:ghc}.
+  \item[\option{xlistings}{}] can be used to pass options to \pkg{xlistings}, for example to change the default style:
+\begin{minted}{latex}
+\usepackage[xlistings={style={plain number},highlights}]{magic-haskell}
+\end{minted}
+\end{description}
+
+\section{Automatically Linking Names}
+\subsection{The Link Database}\label{sec:database}
+In this version, the database \T{magic-haskell-links.cfg} holds \num{\dbcount{names}{*}} links into
+\num{\dbcount{modules}{*}} modules of all packages in \cref{tab:database}.
+It is generated by the bash script \T{tools/generate-links.sh} (on Windows, run it in Git Bash or
+use the WSL) from the list \T{tools/packages.txt}:
+\begin{minted}{bash}
+# package  version (or 'latest')  modules ('*': all remaining ones)
+base 4.22.0.0 Prelude Data.List Data.Maybe ...
+mtl 2.3.2 Control.Monad.State.Class ...
+base 4.22.0.0 *
+\end{minted}
+A name exported by several modules links to the first of them, so \bhs{map} links to the
+\T{Prelude} and not to \T{Data.List}. \Cref{sec:modules} shows how to choose and change the module load order or the modules that are considered to be loaded at all.
+A package may appear more than once, e.g.\ to rank the rarely used modules of \T{base} last. The
+version \T{latest} takes the newest version with documentation on Hackage.
+\begin{table}[htb]
+\centering
+\caption{The packages of the link database, as loaded by this document.}\label{tab:database}
+\begin{tabular}{l r@{.}l S[table-format=3.0] S[table-format=4.0]}
+\toprule
+Package & \multicolumn{2}{c}{Version} & {Modules} & {Links} \\
+\midrule
+\databaserows
+\midrule
+Total & \multicolumn{2}{c}{} & \dbcount{modules}{*} & \dbcount{names}{*} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The names are read from the anchors of the module pages. Afterwards, the script recomputes every
+link as \T{magic-haskell} does and checks that its page and anchor exist. \T{tools/generate-links.sh -{}-verify} repeats the check at any time to ensure that the database is still valid. 
+
+\subsection{Extending the Link Database}\label{sec:extending}
+To link another package or more modules, add them to \T{tools/packages.txt} and regenerate the
+database. The script needs \T{bash}, \T{curl}, and \T{jq}:
+\begin{minted}{bash}
+# in tools/packages.txt: package, version ('latest' for the newest), modules
+vector latest Data.Vector Data.Vector.Mutable
+# regenerate magic-haskell-links.cfg and write the versions used into the list
+tools/generate-links.sh --pin
+\end{minted}
+You can also use and create a database of your own:
+\begin{minted}{bash}
+tools/generate-links.sh -o my-links.cfg my-packages.txt
+\end{minted}
+You can then load it with the option \T{database=my-links}:
+\begin{minted}{latex}
+\usepackage[database=my-links]{magic-haskell}
+\end{minted}
+Single names or links to pages outside of Hackage, can be added in the document itself
+(\cref{sec:adding}).
+
+\subsection{Choosing Modules for Shared Names}\label{sec:modules}
+\cmd{mhsModules} restricts the links to the given modules and ranks them in the given order.
+The key \key{modules} does so for a single listing, and an empty list activates all modules again:
+\begin{minted}{latex}
+\mhsModules{Data.Map.Strict,Prelude}   % from now on
+\begin{hs}[modules={Data.Set}]        % in this listing
+\end{minted}
+With \code|\mhsModules{Data.Map.Strict,Prelude}|, {\mhsModules{Data.Map.Strict,Prelude}\bhs{insert k v m}}
+links \bhs{insert} to \T{Data.Map.Strict}, while it links to \T{Data.List} by default. Names that
+no active module exports are neither linked nor highlighted.
+
+\subsection{Linking to Definitions in the Document}\label{sec:definitions}
+A displayed listing defines the names bound in its first column (\bhs{area :: ...} or
+\bhs{area x = ...}) and the types after \bhs{data}, \bhs{newtype}, \bhs{type}, and \bhs{class}, and the
+constructors of a \bhs{data} or \bhs{newtype}, which keep the plain color and are only underlined.
+Every use of such a name links to its definition: in the same listing if it defines the name,
+else the last definition before, else the first one after. On beamer slides, a link from outside a frame
+goes to the last overlay of that frame, where all of its code is visible, and code that an overlay
+hides (\code|\only|, \T{onlyenv}) defines nothing there. Definitions shadow the names of the
+database, so the introduction's \bhs{area} does not link to any library. The definitions are kept in
+the \T{.aux} file, hence they need a second run.
+
+The bindings of a \bhs{where} or \bhs{let} block are local definitions, which only count within their
+listing. As in Haskell's layout rule, every line that starts in the column of the first binding binds
+another name, so \bhs{total}, \bhs{count}, and \bhs{step} below all link within the listing, while
+\bhs{foldr} links to Hackage:
+\begin{minted}{hs}
+average :: [Double] -> Double
+average xs = total / count
+  where
+    total = foldr (+) 0 xs
+    count = foldr step 0 xs
+    step _ n = n + 1
+\end{minted}
+Inline code and GHCi sessions are never assumed to define something. The key \key{mhsdefinitions} of a
+listing controls its definitions: \T{false} disables the definition tracking, and \T{local} keeps all
+of them within the listing, e.g.\ for a self-contained example that should not affect the links of
+other listings:
+\begin{minted}{latex}
+\begin{hs}[mhsdefinitions=local]
+\end{minted}
+
+\subsection{Resolving Qualified Names and Aliases}\label{sec:qualified}
+Qualified names link into their module: in \bhs{Data.Map.insert k v m}, \bhs{insert} links
+to \T{Data.Map.Strict}, the first module of the database whose name starts with the qualifier.
+Aliases come from the imports of the listings, so after
+\bhs{import qualified Data.Map.Strict as M}, \bhs{M.lookup} links there, too. A name in lower
+case before the dot is considered to be a composition: in \bhs{show.map}, both names link on their own.
+
+\subsection{Adding Links in the Document}\label{sec:adding}
+\begin{description}
+  \item[{\cmd{mhsLinks}\T{[package]\{Module\}\{names\}}}] links names into \T{Module} of the Hackage
+    \T{package} (default \T{base}). Names in upper case are types, other names are values.
+    You have to escape \T{\$} and \T{\&}.
+  \item[{\cmd{mhsConstructors}\T{[package]\{Module\}\{names\}}}] links data constructors, styled like
+    types but linked as values.
+  \item[{\cmd{mhsAddLink}\T{[style]\{url\}\{name\}}}] links a name to any url. The style is \T{type},
+    \T{func}, \T{op}, or \T{plain} (default), and the link wins over the database:
+  \blatex{\\mhsAddLink[func]\{https://example.org/frob\}\{frob\}}.
+  \item[{\cmd{mhsNoLink}\T{\{names\}}}] marks names that are neither to be linked nor highlighted (as a kind of blacklist).
+  \item[{\cmd{mhsSetVersion}\T{\{package\}\{version\}}}] the version in the links of a package. An
+    empty one links to the latest release. It applies to all links typeset after it.
+\end{description}
+
+\section{Typesetting Code}
+\subsection{Ligatures That Copy as Text}\label{sec:ligatures}
+Operators become ligatures whose copy is the original text (with \pkg{accsupp}). Tight ligatures move
+their characters closer together, like programming fonts do, but keep their width, so columns
+still align. These are, of course, opinionated and depend on the used font as well:
+\begin{center}
+\begin{minipage}{.8\linewidth}
+\centering
+\def\do#1{\bhs{#1}\quad}\expandafter\docsvlist\expandafter{\mhsTightLigatures}%
+\par
+\end{minipage}
+\end{center}
+With \cmd{mhsTightLigature}\T{\{operator\}} you can add your own ligature and \cmd{mhsLigatureKern} (default \T{\mhsLigatureKern}) is the distance the characters move so the library may compensate offsets. \cmd{mhsLigature}\T{\{operator\}\{code\}} typesets an operator with arbitrary \TeX code, e.g.\ to use a different font, symbol, or a \href{https://github.com/EagleoutIce/tikzpingus}{cute penguin}:
+\begin{minted}{latex}
+\mhsLigature{<~}{\ensuremath{\leftsquigarrow}}
+\end{minted}
+
+\subsection{Escaping to \LaTeX{} and Marking Segments}\label{sec:markers}
+Code between \code|!*| and \code|*!| is interpreted as \LaTeX, e.g.\ to annotate a line:
+\begin{minted}{latex}
+\begin{hs}
+fib :: Int -> Int -- !*\enquote{naive}, see \emph{memoization}*!
+\end{hs}
+\end{minted}
+This produces:
+\begin{minted}[numbers=none]{hs}
+fib :: Int -> Int -- !*\enquote{naive}, see \emph{memoization}*!
+\end{minted}
+Segments are marked with \code+|warn|...|warn|+, \code+|err|...|err|+, and
+\code+|info|...|info|+. They get a soft band behind the segment, which keeps its colors and links. These may
+span several lines. \code+|num|...|num|+ marks a number, \code+|dim|...|dim|+ fades a segment, and
+\code+|plain|...|plain|+ turns off all highlighting. Markers are disabled within comments:
+\begin{minted}{latex}
+\begin{hs}
+head [] = |err|undefined|err|
+first   = |warn|head|warn| xs
+safe xs = |info|listToMaybe|info| xs
+answer  = |num|forty-two|num| |dim|(or 42)|dim|
+|plain|map|plain| f xs
+\end{hs}
+\end{minted}
+\begin{minted}{hs}
+head [] = |err|undefined|err|
+first   = |warn|head|warn| xs
+safe xs = |info|listToMaybe|info| xs
+answer  = |num|forty-two|num| |dim|(or 42)|dim|
+|plain|map|plain| f xs
+\end{minted}
+\Needspace{16\baselineskip}
+A marker may span several lines. Its bands intentionally cover only the code but not the indentation of a line:
+\begin{minted}{latex}
+\begin{hs}
+main = do
+  |warn|let ys = map (+1) xs
+      zs = filter even ys|warn|
+  print zs
+\end{hs}
+\end{minted}
+\begin{minted}{hs}
+main = do
+  |warn|let ys = map (+1) xs
+      zs = filter even ys|warn|
+  print zs
+\end{minted}
+
+\subsection{Animating Code Step by Step}\label{sec:animations}
+\T{magic-haskell} works with, but does not need, \pkg{code-animation}, which walks through a listing on
+beamer slides: it fades out all lines but the current one and adds comments. Load it next to
+\T{magic-haskell} and wrap any listing of the language:
+\begin{minted}{latex}
+\usepackage{code-animation}
+...
+\begin{frame}[fragile]
+\AnimateCode{onslide={1,2,/3: the recursion,0}}
+\begin{hs}
+size :: Tree -> Int
+size Leaf = 1
+size (Node l r) = size l + size r
+\end{hs}
+\endAnimateCode
+\end{frame}
+\end{minted}
+
+\section{Computing Answers with GHC}\label{sec:ghc}
+With the option \T{ghc} (or \code|\usepackage{magic-haskell-ghc}|) we load an adapter that allows interfacing with GHCi. All interactions are cached and only re-run if the code changes.
+
+\subsection{Types and Values of Expressions}
+\begin{description}
+  \item[\cmd{mhsType}\T{\{expr\}}] returns the inferred type of an expression, with a verbatim argument. Hence, the expressions
+\begin{minted}{latex}
+\mhsType{map}               % just prints the type
+\mhsType*{foldr (:) []}     % with the expression
+\end{minted}
+    produce \mhsType{map} and \mhsType*{foldr (:) []}.
+  \item[\cmd{mhsEval}\T{\{expr\}}] evaluates an expression. \code|\mhsEval{take 5 (iterate (*2) 1)}|
+    produces \mhsEval{take 5 (iterate (*2) 1)}.
+  \item[\cmd{mhsTypeOf}, \cmd{mhsEvalOf}] work the same but without taking the argument verbatim , e.g.\ in an escape
+    \code|-- !*\mhsTypeOf{fib}*!| of a listing.
+  \item[\cmd{mhsGhcTypeInto}\T{\textbackslash macro\{expr\}}, \cmd{mhsGhcEvalInto}\T{\textbackslash macro\{expr\}}]
+    store the type or the value in \code|\macro|.
+  \item[\cmd{mhsGhcIfError}\T{\{true\}\{false\}}] indicates whether the last query failed. Failures show
+    \mhsGhcError{} and write the diagnostic of GHC to the log, missing answers show as \mhsGhcPending.
+  \item[\cmd{mhsGhcTime}, \cmd{mhsGhcMemory}] the time GHCi took for the last evaluation and the memory it
+    allocated, from its statistics (\code|:set +s|), always as plain numbers: the time in milliseconds and
+    the memory in bytes. They are expandable, e.g.\ for computations. \cmd{mhsGhcTimeText} and \cmd{mhsGhcMemoryText} format them. For example,
+    \code|\mhsEval{sum [1 .. 10^6]}| gives \mhsEval{sum [1 .. 10^6]} in \mhsGhcTimeText, allocating
+    \mhsGhcMemoryText{} (the raw values are \T{\mhsGhcTime} and \T{\mhsGhcMemory}).
+    Commands like \code|:t| are no evaluations and keep the values. Please note that, because GHCi also has to interpret expressions, these measurements might be only a rough estimate.
+\end{description}
+
+\subsection{Typesetting GHCi Sessions}\label{sec:sessions}
+The environment \env{ghcisession} runs its lines, one after the other, in a fresh GHCi:
+\begin{minted}{latex}
+\begin{ghcisession}
+let xs = [1 .. 5]
+sum xs
+:t foldr
+\end{ghcisession}
+\end{minted}
+\begin{ghcisession}
+let xs = [1 .. 5]
+sum xs
+:t foldr
+\end{ghcisession}
+On beamer slides, the steps appear one per overlay by default. 
+The options of a session are \key{animate} (to control whether the steps appear one per overlay), \key{start} (the overlay to start the animations with), and \key{listing} (options for the listing):
+\begin{minted}{latex}
+\begin{ghcisession}[start=2,listing={numbers=left}]
+\end{minted}
+\cmd{mhsGhcSessionSetup}\T{\{options\}} sets these options for all following sessions.
+
+\subsection{Writing and Loading Haskell Files}
+The environment \env{mhsfile}\T{[listing options]\{file.hs\}} writes its content to \T{file.hs},
+typesets it, and answers following queries in the scope of that file:
+\begin{mhsfile}{magic-haskell-doc-fib.hs}
+fib :: Integer -> Integer
+fib n = go n 0 1
+  where go 0 a _ = a
+        go k a b = go (k - 1) b (a + b)
+\end{mhsfile}
+Now \code|\mhsType{fib}| is \mhsType{fib} and \code|\mhsEval{map fib [1 .. 10]}| gives
+\begin{center}\mhsEval{map fib [1 .. 10]}\end{center}
+\cmd{mhsGhcLoad}\T{\{file.hs\}} switches to an existing file, \cmd{mhsGhcUnload} back to the
+\T{Prelude}.
+
+\subsection{How We Interact with Ghc}
+All queries of a run are written to the GHCi script \T{\textbackslash jobname.mhs.ghci}, each after a
+marker line. A single GHCi session answers all questions by working with \T{\textbackslash jobname.mhs.out}, which is read by the next run. GHCi only runs if the script changed (its md5 sum is kept
+in the \T{.aux} file).
+GHCi runs automatically if shell escape is unrestricted (\T{-shell-escape}). Otherwise the log
+contains the command to run by hand. The command is written for \T{sh}, and on Windows for
+\T{cmd.exe}.
+
+\begin{description}[itemsep=\smallskipamount]
+  \item[\cmd{mhsGhcCommand}\T{\{cmd\}}] the GHC executable. By default, the first of \T{ghc} on the
+    \T{PATH}, the \T{ghc} of \T{ghcup}, and \code|stack exec -- ghc|; on Windows, the \T{ghc} on the
+    \T{PATH}. You can use this, for example, to guard against endless evaluations using:
+    \code|\mhsGhcCommand{timeout 60 ghc}|.
+  \item[\cmd{mhsGhcFlags}\T{\{flags\}}] can be used to supply further flags, e.g.\ \code|-XGADTs| or \code|-package containers|.
+  \item[\cmd{mhsGhcRun}\T{\{mode\}}] \T{auto} (default), \T{always}, or \T{never} to run GHCi automatically, or to just write the script and log the command to run by hand.
+  \item[\cmd{mhsGhcSetup}\T{\{line\}}] a line to execute at the start of the script, e.g.\ \code|:set -XOverloadedStrings|.
+  \item[\cmd{mhsGhcImport}\T{\{modules\}}] modules imported in every scope, e.g.\ \code|Data.List,Data.Char|.
+  \item[\cmd{mhsGhcSetFormat}\T{\{code\}}] configures how answers are shown, using \T{\#1} as the answer (default:
+    like \cmd{b\deflang}). \cmd{mhsGhcSetErrorFormat} does the same for errors.
+\end{description}
+
+\section{Known Limitations}
+\begin{itemize}
+  \item Operators of one character (except \T{\$}) are never linked as this would break the
+    highlighting of numbers like \T{.5} and of comments.
+  \item Names of the document are only found in listings that are typeset with this package. Furthermore this linkage requires a second run.
+  \item Local bindings are found by their indentation only. Layout with explicit braces and semicolons is
+    not supported. We also only find the first name in pattern binding like \bhs{(a, b) = ...}.
+  \item Operators right after a letter cannot be linked (\bhs{x<\$>y} vs. \bhs{x <\$> y}) due to parsing ambiguities with special infix operators.
+\end{itemize}
+\printindex[\jobname]
+\end{document}
