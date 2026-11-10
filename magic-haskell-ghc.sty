@@ -428,6 +428,13 @@
     \int_set:Nn \l__mhs_ghc_n_int { \seq_count:N \l__mhs_ghc_steps_seq }
     \bool_if:NTF \l__mhs_ghc_animate_bool
       {
+        % before its first step, the session is there but invisible
+        \int_compare:nNnT \l__mhs_ghc_start_int > { 1 }
+          {
+            \__mhs_ghc_session_file:n { 0 }
+            \use:e { \exp_not:N \only < - \int_eval:n { \l__mhs_ghc_start_int - 1 } > }
+              { \__mhs_ghc_session_typeset: }
+          }
         \int_step_inline:nn { \l__mhs_ghc_n_int }
           {
             \__mhs_ghc_session_file:n {##1}
@@ -457,8 +464,10 @@
   }
 \cs_new:Npn \__mhs_ghc_continue:n #1 { { ghci| ~ \exp_not:n {#1} } }
 
-% the session up to step #1; later steps are blank lines, so that every
-% overlay has the same height
+% the session up to step #1; the lines of later steps are typeset invisibly
+% (prefix 'hide>'), so that every overlay reserves the exact final layout:
+% blank lines need not have the height of the lines they stand for, and they
+% do not wrap with breaklines
 \cs_new_protected:Npn \__mhs_ghc_session_file:n #1
   {
     \str_set:Ne \l__mhs_ghc_file_str
@@ -467,7 +476,7 @@
     \seq_map_indexed_inline:Nn \l__mhs_ghc_steps_seq
       {
         \tl_map_inline:nn {##2}
-          { \iow_now:Ne \g__mhs_ghc_iow { \int_compare:nNnF {##1} > {#1} { \exp_not:n {####1} } } }
+          { \iow_now:Ne \g__mhs_ghc_iow { \int_compare:nNnT {##1} > {#1} { hide> } \exp_not:n {####1} } }
       }
     \iow_close:N \g__mhs_ghc_iow
   }

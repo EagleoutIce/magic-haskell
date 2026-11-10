@@ -458,7 +458,8 @@ let xs = [1 .. 5]
 sum xs
 :t foldr
 \end{ghcisession}
-On beamer slides, the steps appear one per overlay by default. 
+On beamer slides, the steps appear one per overlay by default.
+Steps that are yet to come take their space invisibly, so the slide does not move while the session grows.
 The options of a session are \key{animate} (to control whether the steps appear one per overlay), \key{start} (the overlay to start the animations with), and \key{listing} (options for the listing):
 \begin{minted}{latex}
 \begin{ghcisession}[start=2,listing={numbers=left}]

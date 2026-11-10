@@ -465,12 +465,15 @@
     {LANGUAGE}{{{\textit{\sffamily\xlstGetStyle{numbers}LANGUAGE}}}}8,
   magic
 }
+% the rest of the line takes its space but is not shown (pending steps of a session)
+\def\mhs@hide{\ifdefined\pgfsys@begininvisible\pgfsys@begininvisible\aftergroup\pgfsys@endinvisible\else\color{white}\fi}
 \lstdefinelanguage{lGHCi}{
   language=lMagicHaskell,
   morekeywords=[5]{:set,:load,:info,:kind,:reload,:type,:browse,:t,:i,:k,:l,:r,:q},
   alsoletter={:},
   mhsdefinitions=false,
   moredelim=[il][{}]{out>},
+  moredelim=**[il][\mhs@hide]{hide>},
   add to literate={ghci>}{{{\mhs@nocopy{\mhsPrompt{ghci>}}}}}5
     {ghci|}{{{\mhs@nocopy{\mhsPrompt{ghci|}}}}}5
 }

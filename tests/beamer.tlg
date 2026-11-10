@@ -67,17 +67,17 @@ TEST: animated session
 (beamer.vrb
 \g__mhs_ghc_iow=\write...
 SESSION: ghci> let xs = [1 .. 3]
-SESSION: 
-SESSION: 
-SESSION: 
-SESSION: 
+SESSION: hide>ghci> sum xs
+SESSION: hide>out>6
+SESSION: hide>ghci> map (*2) xs
+SESSION: hide>out>[2,4,6]
 ) [5
 ] (beamer.vrb
 SESSION: ghci> let xs = [1 .. 3]
 SESSION: ghci> sum xs
 SESSION: out>6
-SESSION: 
-SESSION: 
+SESSION: hide>ghci> map (*2) xs
+SESSION: hide>out>[2,4,6]
 ) [6
 ] (beamer.vrb
 SESSION: ghci> let xs = [1 .. 3]
@@ -90,6 +90,8 @@ SESSION: out>[2,4,6]
 ============================================================
 TEST: session from overlay 2
 (beamer.vrb
+SESSION: hide>ghci> product [1 .. 4]
+SESSION: hide>out>24
 ) [8
 ] (beamer.vrb
 SESSION: ghci> product [1 .. 4]

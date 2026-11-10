@@ -6,6 +6,7 @@
 - `magic-haskell-ghc`: a port of `hasktex` that batches all queries into one GHCi session per run, reads its answers catcode-safe, and only reruns GHCi if the queries changed.
 - Links are generated from Hackage into `magic-haskell-links.cfg` by `tools/generate-links.sh`, which verifies every link; identifiers are matched as whole words and nothing is linked within strings or comments.
 - `\mhsEval` and the `ghcisession` environment evaluate Haskell with GHCi; sessions are animated on beamer overlays.
+- Animated sessions reserve their final layout on every overlay (also before `start`): steps yet to come are typeset invisibly instead of as blank lines, so slides no longer move as a session grows.
 - Linked names get a slight, colorable underline (option `underline`).
 - The documentation lists the link database from its real data.
 - Names, types, and constructors defined in the document link to their definition; `\mhsModules` and the key `modules` choose among the modules exporting a name.
