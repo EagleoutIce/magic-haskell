@@ -480,6 +480,19 @@ Now \code|\mhsType{fib}| is \mhsType{fib} and \code|\mhsEval{map fib [1 .. 10]}|
 \cmd{mhsGhcLoad}\T{\{file.hs\}} switches to an existing file, \cmd{mhsGhcUnload} back to the
 \T{Prelude}.
 
+A line of the file that starts with \T{hidden>} goes to the file without this prefix, but not into the listing:
+\T{hidden>module Shapes where} or \T{hidden>import Shapes} keep the boilerplate off a slide.
+After \cmd{mhsLensOn} (\cmd{mhsLensOff} turns it off again), every top-level type signature of a file
+(\T{name :: type}, starting in the first column) is shown as a \emph{type lens}: smaller and gray, as an editor
+shows a code lens above a definition. \cmd{mhsLensFormat} holds its style, \cmd{mhsLensScale} its size
+relative to the code (default \T{.8}), and the color \T{mhslens} its color (default gray).
+After \cmd{mhsPlayOn} (LuaTeX only; \cmd{mhsPlayOff} turns it off), a small play button at the right of the
+first line of every file opens the program in Compiler Explorer, which compiles and runs it: the code travels in the
+link (\T{https://godbolt.org/clientstate/}, base64), so nothing is uploaded. The program is the file without its
+hidden lines, plus the lines with the prefix \T{play>}, which only the button gets (for instance a \T{main}).
+\cmd{mhsPlayCompiler} is the compiler (default \T{ghc9122}), \cmd{mhsPlayButton} the button, colored \T{mhsplay},
+\cmd{mhsPlaySize} across and \cmd{mhsPlayOffset} right of the listing (negative: inside it).
+
 \subsection{How We Interact with Ghc}
 All queries of a run are written to the GHCi script \T{\textbackslash jobname.mhs.ghci}, each after a
 marker line. A single GHCi session answers all questions by working with \T{\textbackslash jobname.mhs.out}, which is read by the next run. GHCi only runs if the script changed (its md5 sum is kept

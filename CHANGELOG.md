@@ -13,6 +13,8 @@
 - Sessions support `:{ ... :}` blocks and repeated lines; exceptions count as errors; edited files are re-evaluated.
 - The regression tests cover names, operators, options, markers, the database, definitions, and GHC sessions.
 - Constructors of `data` and `newtype` link to their definition; all bindings of a `where` or `let` block are local definitions; `mhsdefinitions=local` keeps the definitions of a listing within it.
+- `mhsfile`: lines prefixed `hidden>` go to the Haskell file but not into the listing; with `\mhsLensOn`, top-level type signatures are shown as a small gray type lens (`\mhsLensFormat`, `\mhsLensScale`, color `mhslens`).
+- `mhsfile`: with `\mhsPlayOn` (LuaTeX), a subtle play button opens the program in Compiler Explorer (code in the link, lines prefixed `play>` only go there, e.g. a `main`); `magic-haskell-play.lua` builds the link.
 - Definitions work across beamer overlays (also with `\only`, `onlyenv`, and the optional `code-animation` package), and later redefinitions are respected.
 - `\mhsGhcEvalInto` stores a value; `\mhsGhcTime` and `\mhsGhcMemory` give the time (ms) and memory (bytes) of the last evaluation, `\mhsGhcTimeText` and `\mhsGhcMemoryText` format them.
 - The documentation has an index of commands, options, and keys.

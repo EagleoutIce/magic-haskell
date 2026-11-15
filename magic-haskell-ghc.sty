@@ -612,10 +612,108 @@
 
 % a Haskell file written from the document, typeset, and loaded for queries
 % #1 listing options, #2 file name
+% The content goes to a temporary file first. From it, the Haskell file gets every line, without the prefix
+% 'hidden>' (a line for GHC only, e.g. 'hidden>module Shapes where'), and the listing gets every line but the
+% hidden ones. A line with the prefix 'play>' only goes to the program of the play button (e.g. its 'main').
+% With \mhsLensOn, a top-level type signature ('name :: type' in the first column) is shown as a type lens:
+% small and gray, as an editor shows a code lens above a definition (\mhsLensFormat).
+% With \mhsPlayOn (LuaTeX only), a small play button at the right of the first line opens the program (all
+% lines but the hidden ones, and the play lines) in Compiler Explorer, which compiles and runs it.
+\ExplSyntaxOn
+\bool_new:N \g_mhs_lens_bool
+\NewDocumentCommand \mhsLensOn { } { \bool_gset_true:N \g_mhs_lens_bool }
+\NewDocumentCommand \mhsLensOff { } { \bool_gset_false:N \g_mhs_lens_bool }
+\bool_new:N \g_mhs_play_bool
+\NewDocumentCommand \mhsPlayOn { } { \sys_if_engine_luatex:T { \bool_gset_true:N \g_mhs_play_bool } }
+\NewDocumentCommand \mhsPlayOff { } { \bool_gset_false:N \g_mhs_play_bool }
+\str_const:Nn \c__mhs_file_hidden_str { hidden> }
+\str_const:Nn \c__mhs_file_play_str { play> }
+\str_const:Nn \c__mhs_file_lens_str { lens> }
+\str_new:N \l__mhs_file_line_str
+\iow_new:N \g__mhs_file_iow
+\iow_new:N \g__mhs_file_hs_iow
+\iow_new:N \g__mhs_file_play_iow
+\ior_new:N \g__mhs_file_ior
+\cs_generate_variant:Nn \regex_match:nnTF { nV }
+% #1 the temporary file, #2 the Haskell file, #3 the file of the listing, #4 the program of the play button
+\cs_new_protected:Npn \mhs_file_split:nnnn #1#2#3#4
+  {
+    \iow_open:Nn \g__mhs_file_hs_iow { \sys_if_engine_luatex:TF { \c_sys_jobname_str -mhsfile-hs.tmp } {#2} }
+    \iow_open:Nn \g__mhs_file_iow {#3}
+    \iow_open:Nn \g__mhs_file_play_iow {#4}
+    \ior_open:Nn \g__mhs_file_ior {#1}
+    \ior_str_map_inline:Nn \g__mhs_file_ior
+      {
+        \str_set:Nn \l__mhs_file_line_str {##1}
+        \str_if_eq:eeTF { \str_range:Nnn \l__mhs_file_line_str { 1 } { 7 } } { \c__mhs_file_hidden_str }
+          { \iow_now:Ne \g__mhs_file_hs_iow { \str_range:Nnn \l__mhs_file_line_str { 8 } { -1 } } }
+          {
+            \str_if_eq:eeTF { \str_range:Nnn \l__mhs_file_line_str { 1 } { 5 } } { \c__mhs_file_play_str }
+              { \iow_now:Ne \g__mhs_file_play_iow { \str_range:Nnn \l__mhs_file_line_str { 6 } { -1 } } }
+              {
+                \iow_now:Ne \g__mhs_file_hs_iow { \l__mhs_file_line_str }
+                \iow_now:Ne \g__mhs_file_play_iow { \l__mhs_file_line_str }
+                \bool_if:NTF \g_mhs_lens_bool
+                  {
+                    \regex_match:nVTF { \A (?: [a-z_][A-Za-z0-9_']* | \( [^)]+ \) ) (?: \s* , \s* [a-z_][A-Za-z0-9_']* )* \s* :: } \l__mhs_file_line_str
+                      { \iow_now:Ne \g__mhs_file_iow { \c__mhs_file_lens_str \l__mhs_file_line_str } }
+                      { \iow_now:Ne \g__mhs_file_iow { \l__mhs_file_line_str } }
+                  }
+                  { \iow_now:Ne \g__mhs_file_iow { \l__mhs_file_line_str } }
+              }
+          }
+      }
+    \ior_close:N \g__mhs_file_ior
+    \iow_close:N \g__mhs_file_play_iow
+    \iow_close:N \g__mhs_file_iow
+    \iow_close:N \g__mhs_file_hs_iow
+    \sys_if_engine_luatex:T
+      { \lua_now:e { mhs_replace("\lua_escape:e { \c_sys_jobname_str -mhsfile-hs.tmp }", "\lua_escape:e {#2}") } }
+  }
+\cs_new_eq:NN \mhs@file@split \mhs_file_split:nnnn
+\cs_new:Npn \mhs@if@play { \bool_if:NTF \g_mhs_play_bool }
+\ExplSyntaxOff
+\def\mhs@file@tmp{\jobname-mhsfile.tmp}
+\def\mhs@file@shown{\jobname-mhsfile-shown.tmp}
+\def\mhs@file@play{\jobname-mhsfile-play.tmp}
+% the type lens: smaller than the code (with narrower columns, so the letters keep their spacing) and gray
+\newcommand*\mhsLensScale{.8}
+\colorlet{mhslens}{gray}
+\newcommand*\mhsLensFormat{\color{mhslens}\mhs@scalefont\mhsLensScale}
+\def\mhs@scalefont#1{\edef\mhs@t{\fpeval{#1*\f@size}}\fontsize{\mhs@t}{\mhs@t}\selectfont\lst@width=#1\lst@width}
+% the play button: the compiler of Compiler Explorer, the start of the url, and the button, as magic-r draws
+% it: \mhsPlayStyle{subtle} (the default) is a thin ring around a triangle, \mhsPlayStyle{filled} a white
+% triangle on a disc, \mhsPlaySize across, in the color mhsplay; \mhsPlayLabel follows it (default empty)
+\newcommand*\mhsPlayCompiler{ghc9122}
+\newcommand*\mhsPlayBase{https://godbolt.org/clientstate/}
+\colorlet{mhsplay}{gray!55}
+\newcommand*\mhsPlaySize{1.15em}
+\newcommand*\mhsPlayStyle[1]{\def\mhs@playstyle{#1}}\mhsPlayStyle{subtle}
+\def\mhs@play@subtle{\draw[mhsplay,line width=.35pt](0,0)circle(.42);
+  \fill[mhsplay,rounded corners=.3pt](-.11,-.17)--(-.11,.17)--(.19,0)--cycle;}
+\def\mhs@play@filled{\fill[mhsplay!18](0,0)circle(.56);\fill[mhsplay](0,0)circle(.46);
+  \fill[white,rounded corners=.4pt](-.13,-.2)--(-.13,.2)--(.22,0)--cycle;}
+\newcommand*\mhsPlayButton{\tikz[baseline={(0,-.32em)},x=\mhsPlaySize,y=\mhsPlaySize]{\csname mhs@play@\mhs@playstyle\endcsname}}
+\newcommand*\mhsPlayLabel{}
+% \mhsPlaceButton{button} puts the linked button at the first line of the listing, \mhsPlayOffset right of
+% it (negative: into it); redefine it to put the button elsewhere (it gets a box as wide as the listing)
+\newcommand*\mhsPlayOffset{.6em}
+\newcommand\mhsPlaceButton[1]{\hfill\rlap{\hspace{\mhsPlayOffset}\raisebox{-1.2em}{#1}}}
+\IfFileExists{magic-haskell-play.lua}{\ifdefined\directlua\directlua{dofile((("\luaescapestring{\@filef@und}"):gsub("\luaescapestring{"}", ""):gsub(" +$", "")))}\fi}{}
+% the link of the button; the url goes to hyperref as it is (\href would take its '%' apart)
+\def\mhs@playlink#1{\ifdefined\hyper@linkurl\hyper@linkurl{\mhs@playcontent}{#1}\else\href{#1}{\mhs@playcontent}\fi}
+\def\mhs@playcontent{\mhsPlayButton\ifx\mhsPlayLabel\@empty\else\hspace{1mm}\mhsPlayLabel\fi}
+% the button over the first line of the listing that follows, without taking space
+\def\mhs@playbutton{\ifdefined\href\ifdefined\tikz
+  \directlua{mhs_play_define("mhs@playurl", "\luaescapestring{\mhs@file@play}", "\luaescapestring{\mhsPlayCompiler}",
+    "\luaescapestring{\mhsPlayBase}")}%
+  \par\nointerlineskip\vbox to\z@{\hbox to\linewidth{\mhsPlaceButton{\expandafter\mhs@playlink\expandafter{\mhs@playurl}}}\vss}\fi\fi}
 \newenvironment{mhsfile}[2][]{%
   \def\mhs@ghc@file{#2}\def\mhs@ghc@fileopts{#1}%
-  \VerbatimEnvironment\begin{VerbatimOut}{#2}}
+  \VerbatimEnvironment\begin{VerbatimOut}{\mhs@file@tmp}}
   {\end{VerbatimOut}%
+  \mhs@file@split{\mhs@file@tmp}{\mhs@ghc@file}{\mhs@file@shown}{\mhs@file@play}%
   \mhsGhcLoad{\mhs@ghc@file}%
-  \edef\mhs@t{\noexpand\mhs@ghc@input{lMagicHaskell}{\unexpanded\expandafter{\mhs@ghc@fileopts}}{\mhs@ghc@file}}\mhs@t}
+  \mhs@if@play{\mhs@playbutton}{}%
+  \edef\mhs@t{\noexpand\mhs@ghc@input{lMagicHaskell}{moredelim={[il][\noexpand\mhsLensFormat]{lens>}},\unexpanded\expandafter{\mhs@ghc@fileopts}}{\mhs@file@shown}}\mhs@t}
 \endinput
