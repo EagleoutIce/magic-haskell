@@ -369,10 +369,14 @@
 \tl_new:N  \l__mhs_ghc_opts_tl
 \tl_new:N  \l__mhs_ghc_listing_tl
 \bool_new:N \l__mhs_ghc_animate_bool
+\bool_new:N \l__mhs_ghc_ask_bool
+\bool_new:N \l__mhs_ghc_has_out_bool
+\seq_new:N \l__mhs_ghc_states_seq  % per overlay: {step}{1 if the answer of the step is still hidden}
 \int_new:N \l__mhs_ghc_start_int
 \keys_define:nn { magic-haskell / session }
   {
     animate .bool_set:N = \l__mhs_ghc_animate_bool ,
+    ask     .bool_set:N = \l__mhs_ghc_ask_bool ,
     start   .int_set:N  = \l__mhs_ghc_start_int ,
     listing .tl_set:N   = \l__mhs_ghc_listing_tl ,
   }
@@ -382,6 +386,7 @@
   {
     \group_begin:
     \bool_set:Nn \l__mhs_ghc_animate_bool { \cs_if_exist_p:c { ver@beamer.cls } }
+    \bool_set_false:N \l__mhs_ghc_ask_bool
     \int_set:Nn \l__mhs_ghc_start_int { 1 }
     \keys_set:nn { magic-haskell / session } {#1}
     \int_gincr:N \g__mhs_ghc_session_int
@@ -435,14 +440,23 @@
             \use:e { \exp_not:N \only < - \int_eval:n { \l__mhs_ghc_start_int - 1 } > }
               { \__mhs_ghc_session_typeset: }
           }
+        % one overlay per step; with ask, a step with an answer first shows its input alone
+        \seq_clear:N \l__mhs_ghc_states_seq
         \int_step_inline:nn { \l__mhs_ghc_n_int }
           {
-            \__mhs_ghc_session_file:n {##1}
+            \bool_if:NT \l__mhs_ghc_ask_bool
+              { \__mhs_ghc_if_answer:nT {##1} { \seq_put_right:Nn \l__mhs_ghc_states_seq { {##1} {1} } } }
+            \seq_put_right:Nn \l__mhs_ghc_states_seq { {##1} {0} }
+          }
+        \int_set:Nn \l__mhs_ghc_m_int { \seq_count:N \l__mhs_ghc_states_seq }
+        \seq_map_indexed_inline:Nn \l__mhs_ghc_states_seq
+          {
+            \__mhs_ghc_session_file:nn ##2
             \use:e
               {
                 \exp_not:N \only
                 < \int_eval:n { \l__mhs_ghc_start_int + ##1 - 1 }
-                  \int_compare:nNnT {##1} = \l__mhs_ghc_n_int { - } >
+                  \int_compare:nNnT {##1} = \l__mhs_ghc_m_int { - } >
               }
               { \__mhs_ghc_session_typeset: }
           }
@@ -468,18 +482,56 @@
 % (prefix 'hide>'), so that every overlay reserves the exact final layout:
 % blank lines need not have the height of the lines they stand for, and they
 % do not wrap with breaklines
-\cs_new_protected:Npn \__mhs_ghc_session_file:n #1
+% #2 is 1 to hide the answer of step #1 too (the option ask)
+\cs_new_protected:Npn \__mhs_ghc_session_file:n #1 { \__mhs_ghc_session_file:nn {#1} { 0 } }
+\cs_new_protected:Npn \__mhs_ghc_session_file:nn #1#2
   {
     \str_set:Ne \l__mhs_ghc_file_str
-      { \c_sys_jobname_str -mhs-session- \int_use:N \g__mhs_ghc_session_int - #1 .txt }
+      {
+        \c_sys_jobname_str -mhs-session- \int_use:N \g__mhs_ghc_session_int - #1
+        \int_compare:nNnT {#2} = { 1 } { q } .txt
+      }
     \iow_open:Nn \g__mhs_ghc_iow { \l__mhs_ghc_file_str }
     \seq_map_indexed_inline:Nn \l__mhs_ghc_steps_seq
       {
         \tl_map_inline:nn {##2}
-          { \iow_now:Ne \g__mhs_ghc_iow { \int_compare:nNnT {##1} > {#1} { hide> } \exp_not:n {####1} } }
+          {
+            \iow_now:Ne \g__mhs_ghc_iow
+              {
+                \bool_lazy_or:nnT
+                  { \int_compare_p:nNn {##1} > {#1} }
+                  {
+                    \bool_lazy_all_p:n
+                      {
+                        { \int_compare_p:nNn {##1} = {#1} }
+                        { \int_compare_p:nNn {#2} = { 1 } }
+                        { \__mhs_ghc_is_out_p:n {####1} }
+                      }
+                  }
+                  { hide> }
+                \exp_not:n {####1}
+              }
+          }
       }
     \iow_close:N \g__mhs_ghc_iow
   }
+% is a line of a step an answer of GHCi (prefix 'out>')?
+\prg_new_conditional:Npnn \__mhs_ghc_is_out:n #1 { p , T }
+  {
+    \str_if_eq:eeTF { \str_range:nnn {#1} { 1 } { 4 } } { out> }
+      { \prg_return_true: } { \prg_return_false: }
+  }
+% #2 if step #1 has an answer
+\cs_new_protected:Npn \__mhs_ghc_if_answer:nT #1#2
+  {
+    \bool_set_false:N \l__mhs_ghc_has_out_bool
+    \tl_set:Ne \l__mhs_ghc_tmpb_tl { \seq_item:Nn \l__mhs_ghc_steps_seq {#1} }
+    \tl_map_inline:Nn \l__mhs_ghc_tmpb_tl
+      { \__mhs_ghc_is_out:nT {##1} { \bool_set_true:N \l__mhs_ghc_has_out_bool } }
+    \bool_if:NT \l__mhs_ghc_has_out_bool {#2}
+  }
+\int_new:N \l__mhs_ghc_m_int
+\tl_new:N \l__mhs_ghc_tmpb_tl
 \cs_new_protected:Npn \__mhs_ghc_session_typeset:
   {
     \use:e
